@@ -10,13 +10,13 @@ namespace mcp {
     class Config {
     public:
         //单例模式构造配置
-        static Config& getInstance() {};
+        static Config& getInstance();
 
         //加载配置文件
         bool loadConfigFile(const std::string& config_file_path_);
 
         //返回配置加载状态
-        bool isLoaded() const {return is_loaded;};
+        bool isLoaded() const {return is_loaded_;};
 
         Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;
@@ -26,13 +26,13 @@ namespace mcp {
         ~Config() = default;
 
         //检查配置合法性
-        book validateConfig() const;
+        bool validateConfig() const;
 
         //设置默认值
         void setDefaults();
 
-        bool is_loaded = false;
+        bool is_loaded_ = false;
         json config_data_;
         std::string config_file_path_;
-    }
+    };
 }

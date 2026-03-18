@@ -10,10 +10,12 @@ namespace mcp {
     }
 
     bool Config::loadConfigFile(const std::string& config_file_path) {
+        config_file_path_ = config_file_path;
+
         try {
-            std::ifstream config_file(config_file_path);
+            std::ifstream config_file(config_file_path_);
             if (!config_file.is_open()) {
-                std::cerr << "Error opening file: " << config_file_path << std::endl;
+                std::cerr << "Error opening file: " << config_file_path_ << std::endl;
                 return false;
             }
 
@@ -23,7 +25,7 @@ namespace mcp {
             setDefaults();
 
             if (!validateConfig()) {
-                std::cerr << "Config is Invalid: " << config_file_path << std::endl;
+                std::cerr << "Config is Invalid: " << config_file_path_ << std::endl;
                 return false;
             }
 
@@ -33,8 +35,9 @@ namespace mcp {
             std::cerr << "Config file error: " << e.what() << std::endl;
             return false;
         }
+    }
 
-        bool Config::validateConfig() const {
+    bool Config::validateConfig() const {
             if (!config_data_.contains("server")) {
                 std::cerr << "Config file does not contain \"server\"." << std::endl;
                 return false;
@@ -95,5 +98,4 @@ namespace mcp {
                 logging["log_console_output"] = true;
             }
         }
-    }
 }
