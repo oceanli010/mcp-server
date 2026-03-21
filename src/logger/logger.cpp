@@ -20,7 +20,7 @@ namespace mcp {
                       size_t max_file_count,
                       bool console_output) {
             if (initialized_) {
-                spdlog::warn("Logger already initialized");
+                MCP_LOG_WARN("Logger already initialized");
                 return;
             }
 
@@ -30,7 +30,7 @@ namespace mcp {
                 //创建控制台sink
                 if (console_output) {
                     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-                    console_sink->set_partten("[%H:%M:%S.%e] [%^%l%$] [%n] %v");
+                    console_sink->set_pattern("[%H:%M:%S.%e] [%^%l%$] [%n] %v");
                     sinks.push_back(console_sink);
                 }
 
@@ -40,7 +40,7 @@ namespace mcp {
                     std::filesystem::path log_dir = loh_path.parent_path();
                     std::filesystem::create_directory(log_dir);
                     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, max_file_size, max_file_count);
-                    file_sink->set_partten("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v]");
+                    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v]");
                     sinks.push_back(file_sink);
                 }
 
@@ -79,7 +79,9 @@ namespace mcp {
         }
 
         void Logger::shutdown() {
-            if (!initialized_) return;
+            if (!initialized_) {
+                return;
+            }
             try {
                 if (logger_) {
                     logger_->flush();

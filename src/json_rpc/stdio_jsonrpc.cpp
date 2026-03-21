@@ -27,6 +27,12 @@ namespace mcp {
         return it->second(params);
     }
 
+    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher dispatcher) : dispatcher_(std::move(dispatcher)){}
+
+    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher dispatcher, std::istream& in, std::ostream& out)
+        :dispatcher_(std::move(dispatcher)), in_(in), out_(out) {}
+
+
     bool StdioJsonRpcServer::readMessage(std::string& out_body) {
         out_body.clear();
 
@@ -84,7 +90,7 @@ namespace mcp {
         out_body.resize(content_length);
         size_t total_read = 0;
         while (total_read < content_length) {
-            const std::streamsize to_read = static_cast<std::streamsize>(content_length - total_read);
+            const auto to_read = static_cast<std::streamsize>(content_length - total_read);
             in_.read(&out_body[total_read], to_read);
 
             const std::streamsize just_read = in_.gcount();
@@ -96,9 +102,81 @@ namespace mcp {
             }
         }
         if (total_read != content_length) {
-            MCP_LOG_ERROR("Incomplete message: expected {} bytes, got {}", content_length, total_read);
+            MCP_LOG_ERROR("Incomplete message: expected {} byte(s), got {}", content_length, total_read);
             return false;
         }
         return true;
+    }
+
+    void StdioJsonRpcServer::writeMessage(const json& msg) {
+        std::string body = msg.dump();
+        size_t content_length = body.length();
+
+        out_ << "Content-Length: " << content_length << "\r\n\r\n";
+        out_ << body;
+        out_.flush();
+
+        MCP_LOG_DEBUG("Send response: {} byte(s)", content_length);
+    }
+
+    void StdioJsonRpcServer::run() {
+        MCP_LOG_INFO("Stdio Json Rpc Server start");
+
+        while (std::cin.good()) {
+            std::string msg_body;
+            if (!readMessage(msg_body)) {
+                if (std::cin.eof()) {
+                    MCP_LOG_INFO("EOF Reached, shutting down");
+                    break;
+                }
+                continue;
+            }
+
+            if (msg_body.empty()) {
+                continue;
+            }
+
+            try {
+                json request_json = json::parse(msg_body);
+                JsonRpcRequest request = request_json;
+
+                MCP_LOG_DEBUG("Received request: method:{}, id:{}", request.method, request.id.has_value() ? request.id.value().dump() : "null");
+
+                JsonRpcResponse response = handleRequest(request);
+                if (request.id.has_value()) {
+                    writeMessage(response);
+                }
+            } catch (const std::exception& e) {
+                MCP_LOG_ERROR("Processing request error: {}", e.what());
+            }
+        }
+
+        MCP_LOG_INFO("Stdio Json Rpc Server stop");
+    }
+
+    JsonRpcResponse StdioJsonRpcServer::handleRequest(const JsonRpcRequest& req) {
+        JsonRpcResponse resp;
+        resp.id = req.id.has_value() ? req.id.value() : json(nullptr);
+
+        try {
+            if (!dispatcher_.hasHandler(req.method)) {
+                resp.error = JsonRpcError{
+                    .code = jsonrpc_errc::MethodNotFound,
+                    .message = "Method not found" + req.method,
+                };
+                return resp;
+            }
+
+            json params = req.params.has_value() ? req.params.value() : json::object();
+            json result = dispatcher_.call(req.method, params);
+
+            resp.result = result;
+        } catch (const std::exception& e) {
+            resp.error = JsonRpcError{
+                .code = jsonrpc_errc::InternalError,
+                .message = e.what()
+            };
+        }
+        return resp;
     }
 }

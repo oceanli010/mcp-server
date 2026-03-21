@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 
+#define MIN_PORT 1
+#define MAX_PORT 65535
+
 namespace mcp {
     Config& Config::getInstance() {
         static Config instance;
@@ -44,7 +47,7 @@ namespace mcp {
             }
 
             int port = config_data_["server"].value("port", 8080);
-            if (port < 1 || port > 65535) {
+            if (port < MIN_PORT || port > MAX_PORT) {
                 std::cerr << "Invalid port number: " << port << std::endl;
                 return false;
             }

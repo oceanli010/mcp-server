@@ -14,8 +14,8 @@ namespace mcp {
         }
     }
 
-    void from_json(const json& j, JsonRpcResponse& r) {
-        r.jsonrpc = j.value("jsonrpc", "2.0");
+    void from_json(const json& j, JsonRpcRequest& r) {
+        r.json_rpc = j.value("jsonrpc", "2.0");
         r.method = j.at("method").get<std::string>();
 
         auto it_id = j.find("id");
@@ -45,11 +45,11 @@ namespace mcp {
         if (it_data != j.end()) {
             r.data = *it_data;
         } else {
-            r.dara.reset();
+            r.data.reset();
         }
     }
 
-    void to_json(json& j,const JsonRpcRequest& r) {
+    void to_json(json& j,const JsonRpcResponse& r) {
         j = json {
             {"jsonrpc", "2.0"},
             {"id", r.id},
@@ -61,8 +61,8 @@ namespace mcp {
         }
     }
 
-    void from_json(const json& j, JsonRpcRequest& r) {
-        r.jsonrpc = j.value("jsonrpc", "2.0");
+    void from_json(const json& j, JsonRpcResponse& r) {
+        r.json_rpc = j.value("jsonrpc", "2.0");
         r.id = j.at("id").get<std::string>();
 
         r.error.reset();

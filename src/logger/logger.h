@@ -24,7 +24,6 @@ namespace mcp {
                       size_t max_file_count = 5,
                       bool console_output = true);
 
-
             //设置日志等级
             void setLevel(spdlog::level::level_enum level);
 

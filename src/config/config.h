@@ -35,4 +35,6 @@ namespace mcp {
         json config_data_;
         std::string config_file_path_;
     };
+
+    #define MCP_CONFIG Config::getInstance()
 }
