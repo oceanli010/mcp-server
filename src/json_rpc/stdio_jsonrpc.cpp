@@ -12,14 +12,17 @@
 
 namespace mcp {
     void JsonRpcDispatcher::registerHandler(const std::string& method, Handler handler) {
+        std::lock_guard<std::mutex> lock(mutex_);
         handlers_[method] = std::move(handler);
     }
 
-    bool JsonRpcDispatcher::hasHandler(const std::string& method) {
+    bool JsonRpcDispatcher::hasHandler(const std::string& method) const {
+        std::lock_guard<std::mutex> lock(mutex_);
         return handlers_.find(method) != handlers_.end();
     }
 
     json JsonRpcDispatcher::call(const std::string& method, const json& params) const {
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = handlers_.find(method);
         if (it == handlers_.end()) {
             throw std::runtime_error("Method " + method + " not found");
@@ -27,9 +30,9 @@ namespace mcp {
         return it->second(params);
     }
 
-    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher dispatcher) : dispatcher_(std::move(dispatcher)){}
+    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher&& dispatcher) : dispatcher_(std::move(dispatcher)){}
 
-    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher dispatcher, std::istream& in, std::ostream& out)
+    StdioJsonRpcServer::StdioJsonRpcServer(JsonRpcDispatcher&& dispatcher, std::istream& in, std::ostream& out)
         :dispatcher_(std::move(dispatcher)), in_(in), out_(out) {}
 
 
@@ -57,8 +60,8 @@ namespace mcp {
             std::string key = line.substr(0, colon);
             std::string value = line.substr(colon + 1);
             size_t pos = value.find_first_not_of(' ');
-            if (pos == std::string::npos) {
-                MCP_LOG_DEBUG("Value: {}", value);
+            if (pos != std::string::npos) {
+                MCP_LOG_DEBUG("Header: {}:{}", key, value.substr(pos));
                 value = value.substr(pos);
             }
 
@@ -162,7 +165,7 @@ namespace mcp {
             if (!dispatcher_.hasHandler(req.method)) {
                 resp.error = JsonRpcError{
                     .code = jsonrpc_errc::MethodNotFound,
-                    .message = "Method not found" + req.method,
+                    .message = "Method not found: " + req.method,
                 };
                 return resp;
             }

@@ -61,37 +61,37 @@ namespace mcp {
 #define MCP_LOG_INFO(fmt, ...) \
     do { \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->info("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->info("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_WARN(fmt, ...) \
     do { \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->warn("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->warn("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_ERROR(fmt, ...) \
     do{ \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->error("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->error("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_CRITICAL(fmt, ...) \
     do { \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->critical("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->critical("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_DEBUG(fmt, ...) \
     do { \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->debug("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->debug("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_TRACE(fmt, ...) \
     do { \
         auto logger = mcp::logger::Logger::getInstance().getLogger(); \
-        if (logger) logger->trace("[{}:{}]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        if (logger) logger->trace("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define MCP_LOG_DEBUG_IF(condition, ...) \

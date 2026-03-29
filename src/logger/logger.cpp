@@ -36,8 +36,8 @@ namespace mcp {
 
                 //创建文件sink
                 if (!log_file_path.empty()) {
-                    std::filesystem::path loh_path(log_file_path);
-                    std::filesystem::path log_dir = loh_path.parent_path();
+                    std::filesystem::path log_path(log_file_path);
+                    std::filesystem::path log_dir = log_path.parent_path();
                     std::filesystem::create_directory(log_dir);
                     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, max_file_size, max_file_count);
                     file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v]");
@@ -53,7 +53,7 @@ namespace mcp {
                 logger_->info("Logger initialized - name: {}, path: {}", logger_name, log_file_path);
 
             } catch (const spdlog::spdlog_ex& ex) {
-                std::cerr << "Logger initilazed fail: " << ex.what() << std::endl;
+                std::cerr << "Logger initilazed failed: " << ex.what() << std::endl;
                 throw;
             }
         }

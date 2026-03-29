@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+#include <mutex>
 
 namespace mcp {
     using json = nlohmann::json;
@@ -26,7 +27,7 @@ namespace mcp {
 
     struct JsonRpcResponse {
         std::string json_rpc = "2.0";
-        std::string id;
+        std::optional<json> id;
         std::optional<json> result;         //执行成功的结果
         std::optional<JsonRpcError> error;  //执行失败的错误信息
     };
@@ -36,24 +37,38 @@ namespace mcp {
         //方法处理器函数类型模板
         using Handler = std::function<json(const json& params)>;
 
+        JsonRpcDispatcher() = default;
+
+        JsonRpcDispatcher(JsonRpcDispatcher&& other) noexcept {
+            handlers_ = std::move(other.handlers_);
+        }
+
+        JsonRpcDispatcher& operator=(JsonRpcDispatcher&& other) noexcept {
+            if (this != &other) {
+                handlers_ = std::move(other.handlers_);
+            }
+            return *this;
+        }
+
         //注册方法处理器
         void registerHandler(const std::string& method, Handler handler);
 
         //检查注册状态
-        bool hasHandler(const std::string& method);
+        bool hasHandler(const std::string& method) const;
 
         //调用方法处理器
         json call(const std::string& method, const json& params) const;
 
     private:
         std::unordered_map<std::string, Handler> handlers_;
+        mutable std::mutex mutex_;
     };
 
     class StdioJsonRpcServer {
     public:
-        explicit StdioJsonRpcServer(JsonRpcDispatcher dispatcher);
+        explicit StdioJsonRpcServer(JsonRpcDispatcher&& dispatcher);
 
-        StdioJsonRpcServer(JsonRpcDispatcher dispatcher, std::istream& in, std::ostream& out);
+        StdioJsonRpcServer(JsonRpcDispatcher&& dispatcher, std::istream& in, std::ostream& out);
 
         void run();
 

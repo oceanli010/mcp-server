@@ -65,15 +65,12 @@ namespace mcp {
         r.json_rpc = j.value("jsonrpc", "2.0");
         r.id = j.at("id").get<std::string>();
 
-        r.error.reset();
-        r.result.reset();
-
         auto it_error = j.find("error");
         auto it_result = j.find("result");
 
         if (it_result != j.end()) {
             r.result = *it_result;
-        } else if (r.error.has_value()) {
+        } else if (it_error != j.end()) {
             r.error = it_error->get<JsonRpcError>();
         }
     }

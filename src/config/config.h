@@ -3,6 +3,8 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 
 namespace mcp {
     using json = nlohmann::json;
@@ -21,6 +23,18 @@ namespace mcp {
         Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;
 
+        int getServerPort() const;
+
+        std::string getLogPath() const;
+
+        std::string getLogLevel() const;
+
+        size_t getLogFileSize() const;
+
+        int getLogFileCount() const;
+
+        bool getLogConsoleOutput() const;
+
     private:
         Config() = default;
         ~Config() = default;
@@ -34,6 +48,7 @@ namespace mcp {
         bool is_loaded_ = false;
         json config_data_;
         std::string config_file_path_;
+        mutable std::shared_mutex mutex_;
     };
 
     #define MCP_CONFIG Config::getInstance()

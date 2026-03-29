@@ -9,9 +9,9 @@
 namespace mcp {
     class HttpJsonRpcServer {
     public:
-        explicit HttpJsonRpcServer(JsonRpcDispatcher dispatcher);
+        explicit HttpJsonRpcServer(JsonRpcDispatcher&& dispatcher);
 
-        HttpJsonRpcServer(JsonRpcDispatcher dispatcher, const std::string& host, int port);
+        HttpJsonRpcServer(JsonRpcDispatcher&& dispatcher, const std::string& host, int port);
 
         virtual ~HttpJsonRpcServer();
 
@@ -36,5 +36,7 @@ namespace mcp {
         std::atomic<bool> running_ {false};
 
         std::string handleRequest(const std::string& request);
+        JsonRpcResponse processSingleRequest(const JsonRpcRequest& req);
+        std::string createErrorResponse(int code, const std::string& message);
     };
 }

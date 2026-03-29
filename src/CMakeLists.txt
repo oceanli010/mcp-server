@@ -13,13 +13,10 @@ target_include_directories(mcp_lib PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/mcp
 )
 
+find_package(httplib REQUIRED)
 target_link_libraries(mcp_lib
         Threads::Threads
+        nlohmann_json::nlohmann_json
+        spdlog::spdlog
+        httplib::httplib
 )
-
-target_link_libraries(mcp_lib nlohmann_json::nlohmann_json)
-
-target_link_libraries(mcp_lib spdlog::spdlog)
-
-find_package(httplib REQUIRED)
-target_link_libraries(mcp_lib httplib::httplib)
