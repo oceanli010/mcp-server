@@ -9,9 +9,7 @@
 #include <string>
 
 namespace mcp {
-
     namespace logger {
-
         class Logger {
         public:
             //单例模式构造

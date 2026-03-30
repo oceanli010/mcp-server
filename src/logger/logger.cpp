@@ -7,7 +7,6 @@
 #include <iostream>
 
 namespace mcp {
-
     namespace logger {
         Logger& Logger::getInstance() {
             static Logger instance;
@@ -61,7 +60,7 @@ namespace mcp {
         void Logger::setLevel(spdlog::level::level_enum level) {
             if (logger_) {
                 logger_->set_level(level);
-                logger_->info("Logger set level: {}", level);
+                logger_->info("Logger set level: {}", spdlog::level::to_string_view(level));
             }
         }
 

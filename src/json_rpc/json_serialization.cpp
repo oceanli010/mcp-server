@@ -52,7 +52,7 @@ namespace mcp {
     void to_json(json& j,const JsonRpcResponse& r) {
         j = json {
             {"jsonrpc", "2.0"},
-            {"id", r.id},
+            {"id", *r.id}
         };
         if (r.result.has_value()) {
             j.emplace("result", *r.result);
@@ -63,7 +63,7 @@ namespace mcp {
 
     void from_json(const json& j, JsonRpcResponse& r) {
         r.json_rpc = j.value("jsonrpc", "2.0");
-        r.id = j.at("id").get<std::string>();
+        r.id = j.at("id");
 
         auto it_error = j.find("error");
         auto it_result = j.find("result");
