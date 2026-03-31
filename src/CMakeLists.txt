@@ -6,6 +6,8 @@ add_library(mcp_lib STATIC
         json_rpc/http_jsonrpc.cpp
         mcp/types.cpp
         mcp/types.h
+        mcp/mcp_server.cpp
+        mcp/mcp_server.h
 )
 
 target_include_directories(mcp_lib PUBLIC

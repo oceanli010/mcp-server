@@ -192,4 +192,104 @@ namespace mcp {
         message.content = j["content"];
         return message;
     }
+
+    // ServerCapabilities::ToolCapabilities implementation
+    json ServerCapabilities::ToolCapabilities::to_json() const {
+        json j;
+        j["list_changed"] = list_changed;
+        return j;
+    }
+
+    ServerCapabilities::ToolCapabilities ServerCapabilities::ToolCapabilities::from_json(const json& j) {
+        ServerCapabilities::ToolCapabilities capabilities;
+        capabilities.list_changed = j.value("list_changed", false);
+        return capabilities;
+    }
+
+    // ServerCapabilities::ResourcesCapabilities implementation
+    json ServerCapabilities::ResourcesCapabilities::to_json() const {
+        json j;
+        j["subscribed"] = subscribed;
+        j["list_changed"] = list_changed;
+        return j;
+    }
+
+    ServerCapabilities::ResourcesCapabilities ServerCapabilities::ResourcesCapabilities::from_json(const json& j) {
+        ServerCapabilities::ResourcesCapabilities capabilities;
+        capabilities.subscribed = j.value("subscribed", false);
+        capabilities.list_changed = j.value("list_changed", false);
+        return capabilities;
+    }
+
+    // ServerCapabilities::PromptCapabilities implementation
+    json ServerCapabilities::PromptCapabilities::to_json() const {
+        json j;
+        j["list_changed"] = list_changed;
+        return j;
+    }
+
+    ServerCapabilities::PromptCapabilities ServerCapabilities::PromptCapabilities::from_json(const json& j) {
+        ServerCapabilities::PromptCapabilities capabilities;
+        capabilities.list_changed = j.value("list_changed", false);
+        return capabilities;
+    }
+
+    // ServerCapabilities implementation
+    json ServerCapabilities::to_json() const {
+        json j;
+        if (tool_capabilities) j["tool_capabilities"] = tool_capabilities->to_json();
+        if (resources_capabilities) j["resources_capabilities"] = resources_capabilities->to_json();
+        if (prompt_capabilities) j["prompt_capabilities"] = prompt_capabilities->to_json();
+        if (logging) j["logging"] = *logging;
+        return j;
+    }
+
+    ServerCapabilities ServerCapabilities::from_json(const json& j) {
+        ServerCapabilities capabilities;
+        if (j.contains("tool_capabilities")) {
+            capabilities.tool_capabilities = ToolCapabilities::from_json(j["tool_capabilities"]);
+        }
+        if (j.contains("resources_capabilities")) {
+            capabilities.resources_capabilities = ResourcesCapabilities::from_json(j["resources_capabilities"]);
+        }
+        if (j.contains("prompt_capabilities")) {
+            capabilities.prompt_capabilities = PromptCapabilities::from_json(j["prompt_capabilities"]);
+        }
+        if (j.contains("logging")) {
+            capabilities.logging = j["logging"];
+        }
+        return capabilities;
+    }
+
+    // ServerInfo implementation
+    json ServerInfo::to_json() const {
+        json j;
+        j["name"] = name;
+        j["version"] = version;
+        return j;
+    }
+
+    ServerInfo ServerInfo::from_json(const json& j) {
+        ServerInfo info;
+        info.name = j["name"];
+        info.version = j["version"];
+        return info;
+    }
+
+    // InitializeResult implementation
+    json InitializeResult::to_json() const {
+        json j;
+        j["version"] = version;
+        j["capabilities"] = capabilities.to_json();
+        j["info"] = info.to_json();
+        return j;
+    }
+
+    InitializeResult InitializeResult::from_json(const json& j) {
+        InitializeResult result;
+        result.version = j["version"];
+        result.capabilities = ServerCapabilities::from_json(j["capabilities"]);
+        result.info = ServerInfo::from_json(j["info"]);
+        return result;
+    }
 }

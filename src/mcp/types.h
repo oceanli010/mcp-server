@@ -96,4 +96,53 @@ namespace mcp {
         json to_json() const;
         static PromptMessage from_json(const json& j);
     };
+
+    struct ServerCapabilities {
+        struct ToolCapabilities {
+            bool list_changed = false;
+
+            json to_json() const;
+            static ToolCapabilities from_json(const json& j);
+        };
+
+        struct ResourcesCapabilities {
+            bool subscribed = false;
+            bool list_changed = false;
+
+            json to_json() const;
+            static ResourcesCapabilities from_json(const json& j);
+        };
+
+        struct PromptCapabilities {
+            bool list_changed = false;
+
+            json to_json() const;
+            static PromptCapabilities from_json(const json& j);
+        };
+
+        std::optional<ToolCapabilities> tool_capabilities;
+        std::optional<ResourcesCapabilities> resources_capabilities;
+        std::optional<PromptCapabilities> prompt_capabilities;
+        std::optional<json> logging;
+
+        json to_json() const;
+        static ServerCapabilities from_json(const json& j);
+    };
+
+    struct ServerInfo {
+        std::string name;
+        std::string version;
+
+        json to_json() const;
+        static ServerInfo from_json(const json& j);
+    };
+
+    struct InitializeResult {
+        std::string version;
+        ServerCapabilities capabilities;
+        ServerInfo info;
+
+        json to_json() const;
+        static InitializeResult from_json(const json& j);
+    };
 }
