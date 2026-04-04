@@ -23,4 +23,13 @@ target_link_libraries(mcp_lib
         nlohmann_json::nlohmann_json
         spdlog::spdlog
         httplib::httplib
+        CURL::libcurl
+)
+
+add_executable(mcp_server
+        mcp_server_main.cpp
+)
+
+target_link_libraries(mcp_server
+        mcp_lib
 )

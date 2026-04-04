@@ -36,7 +36,7 @@ namespace mcp {
         std::string type;
         std::optional<std::string> text;
         std::optional<std::string> base64;
-        std::optional<std::string> mine_type;
+        std::optional<std::string> mime_type;
         std::optional<std::string> uri;
 
         json to_json() const;
@@ -55,7 +55,7 @@ namespace mcp {
         std::string uri;
         std::string name;
         std::optional<std::string> description;
-        std::optional<std::string> mine_type;
+        std::optional<std::string> mime_type;
 
         json to_json() const;
         static Resources from_json(const json& j);
@@ -63,7 +63,7 @@ namespace mcp {
 
     struct ResourcesContent {
         std::string uri;
-        std::optional<std::string> mine_type;
+        std::optional<std::string> mime_type;
         std::string text;
         std::optional<std::string> base64;
 

@@ -113,8 +113,8 @@ namespace mcp {
             {"text", text}
         };
 
-        if (mine_type.has_value()) {
-            j["mineT_type"] = *mine_type;
+        if (mime_type.has_value()) {
+            j["mime_type"] = *mime_type;
         }
         if (base64.has_value()) {
             j["base64"] = *base64;
@@ -125,7 +125,7 @@ namespace mcp {
     ResourcesContent ResourcesContent::from_json(const json& j) {
         ResourcesContent content;
         content.uri = j["uri"];
-        if (j.contains("mine_type")) content.mine_type = j["mine_type"];
+        if (j.contains("mine_type")) content.mime_type = j["mine_type"];
         content.text = j["text"];
         if (j.contains("base64")) content.base64 = j["base64"];
         return content;

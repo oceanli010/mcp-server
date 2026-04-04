@@ -16,8 +16,8 @@ namespace mcp {
             static Logger& getInstance();
 
             //初始化
-            void init(const std::string logger_name = "mcp",
-                      const std::string log_file_path = "",
+            void init(const std::string& logger_name = "mcp",
+                      const std::string& log_file_path = "",
                       size_t max_file_size = 1024 * 1024 * 1024,
                       size_t max_file_count = 5,
                       bool console_output = true);

@@ -13,8 +13,8 @@ namespace mcp {
             return instance;
         }
 
-        void Logger::init(const std::string logger_name,
-                      const std::string log_file_path,
+        void Logger::init(const std::string& logger_name,
+                      const std::string& log_file_path,
                       size_t max_file_size,
                       size_t max_file_count,
                       bool console_output) {
@@ -52,7 +52,7 @@ namespace mcp {
                 logger_->info("Logger initialized - name: {}, path: {}", logger_name, log_file_path);
 
             } catch (const spdlog::spdlog_ex& ex) {
-                std::cerr << "Logger initilazed failed: " << ex.what() << std::endl;
+                std::cerr << "Logger initialized failed: " << ex.what() << std::endl;
                 throw;
             }
         }

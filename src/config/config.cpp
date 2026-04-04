@@ -1,4 +1,5 @@
 #include "config.h"
+#include "logger.h"
 
 #include <fstream>
 #include <iostream>
@@ -19,7 +20,7 @@ namespace mcp {
         try {
             std::ifstream config_file(config_file_path_);
             if (!config_file.is_open()) {
-                std::cerr << "Error opening file: " << config_file_path_ << std::endl;
+                MCP_LOG_ERROR("Failed to open config file: " + config_file_path_);
                 return false;
             }
 
@@ -29,14 +30,14 @@ namespace mcp {
             setDefaults();
 
             if (!validateConfig()) {
-                std::cerr << "Config is Invalid: " << config_file_path_ << std::endl;
+                MCP_LOG_ERROR("Failed to validate config file: " + config_file_path_);
                 return false;
             }
 
             is_loaded_ = true;
             return true;
         } catch (const std::exception& e) {
-            std::cerr << "Config file error: " << e.what() << std::endl;
+            MCP_LOG_ERROR("Failed to load config file: " + std::string(e.what()));
             return false;
         }
     }
@@ -44,13 +45,13 @@ namespace mcp {
     bool Config::validateConfig() const {
         std::shared_lock<std::shared_mutex> lock(mutex_);
         if (!config_data_.contains("server")) {
-            std::cerr << "Config file does not contain \"server\"." << std::endl;
+            MCP_LOG_ERROR("Invalid server configuration");
             return false;
         }
 
         int port = config_data_["server"].value("port", 8080);
         if (port < MIN_PORT || port > MAX_PORT) {
-            std::cerr << "Invalid port number: " << port << std::endl;
+            MCP_LOG_ERROR("Invalid port number: ", port);
             return false;
         }
 
@@ -58,13 +59,13 @@ namespace mcp {
             std::string log_level = config_data_["logging"].value("log_level", std::string("info"));
             if (log_level != "info" && log_level != "debug" && log_level != "trace"&&
                 log_level != "warn" && log_level != "error" && log_level != "critical") {
-                    std::cerr << "Invalid logging level: " << log_level << std::endl;
+                    MCP_LOG_ERROR("Invalid log level: " + log_level);
                     return false;
                 }
 
             size_t log_file_size = config_data_["logging"].value("log_file_size", 10 * 1024 * 1024);
             if (log_file_size <= 0) {
-                std::cerr << "Invalid log file size: " << log_file_size << std::endl;
+                MCP_LOG_ERROR("Invalid log file size: " + std::to_string(log_file_size));
                 return false;
             }
         }

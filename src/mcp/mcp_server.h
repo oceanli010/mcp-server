@@ -14,7 +14,7 @@ namespace mcp {
         using PromptGenerator = std::function<std::vector<PromptMessage>(const json& arguments)>;
         using SseEventCallback = std::function<void(const json& arguments)>;
 
-        McpServer(const std::string& name, const std::string version);
+        McpServer(const std::string& name, const std::string& version);
 
         InitializeResult get_initialize_result() const;
 

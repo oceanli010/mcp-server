@@ -16,7 +16,7 @@ namespace mcp {
                 json err_response = {
                     {"jsonrpc", "2.0"},
                     {"error", {
-                        {"code", -32603},
+                        {"code", jsonrpc_errc::InternalError},
                         {"message", "Internal server error"}
                     }},
                     {"id", nullptr}
