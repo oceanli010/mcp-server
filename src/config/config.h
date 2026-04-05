@@ -34,6 +34,8 @@ namespace mcp {
         int getLogFileCount() const;
 
         bool getLogConsoleOutput() const;
+    
+        std::vector<std::string> getApiKeys() const;
 
     private:
         Config() = default;

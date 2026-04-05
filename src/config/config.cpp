@@ -14,7 +14,7 @@ namespace mcp {
     }
 
     bool Config::loadConfigFile(const std::string& config_file_path) {
-        std::shared_lock<std::shared_mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
         config_file_path_ = config_file_path;
 
         try {
@@ -43,7 +43,7 @@ namespace mcp {
     }
 
     bool Config::validateConfig() const {
-        std::shared_lock<std::shared_mutex> lock(mutex_);
+        // 注意：这里不获取锁，因为调用者已经持有了独占锁
         if (!config_data_.contains("server")) {
             MCP_LOG_ERROR("Invalid server configuration");
             return false;
@@ -74,14 +74,13 @@ namespace mcp {
     }
 
     void Config::setDefaults() {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
-        if (!config_data_.contains("server")) {
-            config_data_["server"] = json::object();
-        }
-
-        auto& server = config_data_["server"];
-        if (!server.contains("port")) {
-            server["port"] = 8080;
+        // 注意：这里不获取锁，因为调用者已经持有了独占锁
+        // 只在server部分存在时添加默认值，不添加整个server对象
+        if (config_data_.contains("server")) {
+            auto& server = config_data_["server"];
+            if (!server.contains("port")) {
+                server["port"] = 8080;
+            }
         }
 
         if (!config_data_.contains("logging")) {
@@ -103,6 +102,15 @@ namespace mcp {
         }
         if (!logging.contains("log_console_output")) {
             logging["log_console_output"] = true;
+        }
+        
+        if (!config_data_.contains("auth")) {
+            config_data_["auth"] = json::object();
+        }
+        
+        auto& auth = config_data_["auth"];
+        if (!auth.contains("api_keys")) {
+            auth["api_keys"] = json::array();
         }
     }
 
@@ -134,5 +142,16 @@ namespace mcp {
     bool Config::getLogConsoleOutput() const {
         std::shared_lock<std::shared_mutex> lock(mutex_);
         return config_data_["logging"].value("log_console_output", true);
+    }
+    
+    std::vector<std::string> Config::getApiKeys() const {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        std::vector<std::string> api_keys;
+        if (config_data_.contains("auth") && config_data_["auth"].contains("api_keys")) {
+            for (const auto& key : config_data_["auth"]["api_keys"]) {
+                api_keys.push_back(key.get<std::string>());
+            }
+        }
+        return api_keys;
     }
 }

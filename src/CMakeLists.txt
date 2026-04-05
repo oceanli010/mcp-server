@@ -1,6 +1,8 @@
 add_library(mcp_lib STATIC
         config/config.cpp
         logger/logger.cpp
+        auth/auth.cpp
+        auth/auth.h
         json_rpc/stdio_jsonrpc.cpp
         json_rpc/json_serialization.cpp
         json_rpc/http_jsonrpc.cpp
@@ -13,6 +15,7 @@ add_library(mcp_lib STATIC
 target_include_directories(mcp_lib PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/config
         ${CMAKE_CURRENT_SOURCE_DIR}/logger
+        ${CMAKE_CURRENT_SOURCE_DIR}/auth
         ${CMAKE_CURRENT_SOURCE_DIR}/json_rpc
         ${CMAKE_CURRENT_SOURCE_DIR}/mcp
 )

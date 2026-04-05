@@ -1,5 +1,6 @@
 #include "config/config.h"
 #include "logger/logger.h"
+#include "auth/auth.h"
 #include "http_jsonrpc.h"
 #include "jsonrpc.h"
 #include "mcp_server.h"
@@ -572,12 +573,17 @@ int main(int argc, char* argv[]) {
     );
     MCP_LOG_SET_LEVEL(stringToLogLevel(MCP_CONFIG.getLogLevel()));
 
+    // 初始化认证系统
+    auto api_keys = MCP_CONFIG.getApiKeys();
+    MCP_AUTH.init(api_keys);
+
     MCP_LOG_INFO("Starting MCP Server");
     MCP_LOG_INFO("Config file: {}", config_file);
     MCP_LOG_INFO("Mode: {}", mode);
     if (mode == "http" || mode == "both") {
         MCP_LOG_INFO("HTTP: {}:{}", host, port);
     }
+    MCP_LOG_INFO("Authentication: {}", MCP_AUTH.isEnabled() ? "Enabled" : "Disabled");
 
     try {
         McpServer mcp_server("mcp-server", "1.0.0");

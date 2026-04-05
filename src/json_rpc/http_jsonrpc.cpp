@@ -2,6 +2,7 @@
 #include "json_serialization.h"
 #include "logger.h"
 #include "config.h"
+#include "auth.h"
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -39,7 +40,41 @@ namespace mcp {
         impl_->server.Post("/jsonrpc", [this](const httplib::Request& req, httplib::Response& resp) {
             resp.set_header("Access-Control-Allow-Origin", "*");
             resp.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
-            resp.set_header("Access-Control-Allow-Headers", "Content-Type");
+            resp.set_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
+
+            // 认证检查
+            if (MCP_AUTH.isEnabled()) {
+                auto api_key_it = req.headers.find("X-API-Key");
+                if (api_key_it == req.headers.end()) {
+                    MCP_LOG_WARN("Missing API key in request");
+                    json error_response = {
+                        {"jsonrpc", "2.0"},
+                        {"error", {
+                            {"code", 401},
+                            {"message", "Missing API key"}
+                        }},
+                        {"id", nullptr}
+                    };
+                    resp.set_content(error_response.dump(), "application/json");
+                    resp.status = 401;
+                    return;
+                }
+                
+                if (!MCP_AUTH.validateApiKey(api_key_it->second)) {
+                    MCP_LOG_WARN("Invalid API key: {}", api_key_it->second);
+                    json error_response = {
+                        {"jsonrpc", "2.0"},
+                        {"error", {
+                            {"code", 401},
+                            {"message", "Invalid API key"}
+                        }},
+                        {"id", nullptr}
+                    };
+                    resp.set_content(error_response.dump(), "application/json");
+                    resp.status = 401;
+                    return;
+                }
+            }
 
             try {
                 std::string response = handleRequest(req.body);
@@ -63,7 +98,7 @@ namespace mcp {
         impl_->server.Options("/jsonrpc", [](const httplib::Request& req, httplib::Response& resp) {
             resp.set_header("Access-Control-Allow-Origin", "*");
             resp.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
-            resp.set_header("Access-Control-Allow-Headers", "Content-Type");
+            resp.set_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
             resp.status = 204;
         });
 
@@ -196,7 +231,26 @@ namespace mcp {
             resp.set_header("Cache-Control", "no-cache");
             resp.set_header("Connection", "keep-alive");
             resp.set_header("Access-Control-Allow-Origin", "*");
+            resp.set_header("Access-Control-Allow-Headers", "X-API-Key");
             resp.set_header("X-Access-Buffering", "no");
+
+            // 认证检查
+            if (MCP_AUTH.isEnabled()) {
+                auto api_key_it = req.headers.find("X-API-Key");
+                if (api_key_it == req.headers.end()) {
+                    MCP_LOG_WARN("Missing API key in SSE request");
+                    resp.status = 401;
+                    resp.set_content("Missing API key", "text/plain");
+                    return;
+                }
+                
+                if (!MCP_AUTH.validateApiKey(api_key_it->second)) {
+                    MCP_LOG_WARN("Invalid API key for SSE: {}", api_key_it->second);
+                    resp.status = 401;
+                    resp.set_content("Invalid API key", "text/plain");
+                    return;
+                }
+            }
 
             resp.set_chunked_content_provider("text/event_stream", [callback](size_t, httplib::DataSink& sink) {
                 auto send_event = [&sink](const std::string& data) {

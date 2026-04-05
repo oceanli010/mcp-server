@@ -50,7 +50,7 @@ namespace mcp {
         j["type"] = type;
         if (text) j["text"] = *text;
         if (base64) j["base64"] = *base64;
-        if (mine_type) j["mine_type"] = *mine_type;
+        if (mime_type) j["mime_type"] = *mime_type;
         if (uri) j["uri"] = *uri;
         return j;
     }
@@ -60,7 +60,7 @@ namespace mcp {
         item.type = j["type"];
         if (j.contains("text")) item.text = j["text"];
         if (j.contains("base64")) item.base64 = j["base64"];
-        if (j.contains("mine_type")) item.mine_type = j["mine_type"];
+        if (j.contains("mime_type")) item.mime_type = j["mime_type"];
         if (j.contains("uri")) item.uri = j["uri"];
         return item;
     }
@@ -93,7 +93,7 @@ namespace mcp {
         j["uri"] = uri;
         j["name"] = name;
         if (description) j["description"] = *description;
-        if (mine_type) j["mine_type"] = *mine_type;
+        if (mime_type) j["mime_type"] = *mime_type;
         return j;
     }
 
@@ -102,7 +102,7 @@ namespace mcp {
         resources.uri = j["uri"];
         resources.name = j["name"];
         if (j.contains("description")) resources.description = j["description"];
-        if (j.contains("mine_type")) resources.mine_type = j["mine_type"];
+        if (j.contains("mime_type")) resources.mime_type = j["mime_type"];
         return resources;
     }
 
@@ -125,7 +125,7 @@ namespace mcp {
     ResourcesContent ResourcesContent::from_json(const json& j) {
         ResourcesContent content;
         content.uri = j["uri"];
-        if (j.contains("mine_type")) content.mime_type = j["mine_type"];
+        if (j.contains("mime_type")) content.mime_type = j["mime_type"];
         content.text = j["text"];
         if (j.contains("base64")) content.base64 = j["base64"];
         return content;

@@ -65,6 +65,8 @@ namespace mcp {
                 value = value.substr(pos);
             }
 
+            // 将key和value都转换为小写，以便大小写不敏感的比较
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
             std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
             if (key == "content-length") {
                 try {
@@ -125,10 +127,10 @@ namespace mcp {
     void StdioJsonRpcServer::run() {
         MCP_LOG_INFO("Stdio Json Rpc Server start");
 
-        while (std::cin.good()) {
+        while (in_.good()) {
             std::string msg_body;
             if (!readMessage(msg_body)) {
-                if (std::cin.eof()) {
+                if (in_.eof()) {
                     MCP_LOG_INFO("EOF Reached, shutting down");
                     break;
                 }
@@ -151,6 +153,14 @@ namespace mcp {
                 }
             } catch (const std::exception& e) {
                 MCP_LOG_ERROR("Processing request error: {}", e.what());
+                // 发送错误响应
+                JsonRpcResponse resp;
+                resp.id = json(nullptr);
+                resp.error = JsonRpcError{
+                    .code = jsonrpc_errc::ParseError,
+                    .message = e.what()
+                };
+                writeMessage(resp);
             }
         }
 
@@ -162,6 +172,15 @@ namespace mcp {
         resp.id = req.id.has_value() ? req.id.value() : json(nullptr);
 
         try {
+            // 检查method是否存在
+            if (req.method.empty()) {
+                resp.error = JsonRpcError{
+                    .code = jsonrpc_errc::InvalidRequest,
+                    .message = "Method not found in request",
+                };
+                return resp;
+            }
+
             if (!dispatcher_.hasHandler(req.method)) {
                 resp.error = JsonRpcError{
                     .code = jsonrpc_errc::MethodNotFound,
