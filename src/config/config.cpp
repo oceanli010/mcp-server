@@ -43,7 +43,6 @@ namespace mcp {
     }
 
     bool Config::validateConfig() const {
-        // 注意：这里不获取锁，因为调用者已经持有了独占锁
         if (!config_data_.contains("server")) {
             MCP_LOG_ERROR("Invalid server configuration");
             return false;
@@ -74,8 +73,6 @@ namespace mcp {
     }
 
     void Config::setDefaults() {
-        // 注意：这里不获取锁，因为调用者已经持有了独占锁
-        // 只在server部分存在时添加默认值，不添加整个server对象
         if (config_data_.contains("server")) {
             auto& server = config_data_["server"];
             if (!server.contains("port")) {

@@ -268,7 +268,7 @@ namespace mcp {
     }
 
     void HttpJsonRpcServer::run() {
-        if (!running_.exchange(true)) {
+        if (running_.exchange(true)) {
             MCP_LOG_WARN("Server is already running");
             return;
         }
@@ -280,10 +280,11 @@ namespace mcp {
         }
         MCP_LOG_INFO("HTTP JSON-RPC server Stopped");
         impl_->server.stop();
+        running_ = false;
     }
 
     void HttpJsonRpcServer::stop() {
-        if (running_.exchange(false)) {
+        if (!running_.exchange(false)) {
             MCP_LOG_WARN("Server is already stopped");
             return;
         }

@@ -16,7 +16,6 @@ namespace mcp {
 
     void from_json(const json& j, JsonRpcRequest& r) {
         r.json_rpc = j.value("jsonrpc", "2.0");
-        // 使用value()而不是at()，这样在method字段不存在时不会抛出异常
         r.method = j.value("method", "");
 
         auto it_id = j.find("id");

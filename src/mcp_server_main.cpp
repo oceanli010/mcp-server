@@ -573,7 +573,6 @@ int main(int argc, char* argv[]) {
     );
     MCP_LOG_SET_LEVEL(stringToLogLevel(MCP_CONFIG.getLogLevel()));
 
-    // 初始化认证系统
     auto api_keys = MCP_CONFIG.getApiKeys();
     MCP_AUTH.init(api_keys);
 

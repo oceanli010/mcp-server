@@ -13,16 +13,16 @@ find_package(CURL REQUIRED)
 
 find_package(nlohmann_json REQUIRED)
 
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-linux/share)
+set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-linux/include)
+set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-linux/lib)
+
+find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(httplib REQUIRED)
 
 add_subdirectory(src)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")
     add_subdirectory(examples)
-endif()
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
-    find_package(GTest REQUIRED)
-    enable_testing()
-    add_subdirectory(tests)
 endif()

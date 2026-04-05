@@ -65,7 +65,6 @@ namespace mcp {
                 value = value.substr(pos);
             }
 
-            // 将key和value都转换为小写，以便大小写不敏感的比较
             std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
             std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
             if (key == "content-length") {
@@ -153,7 +152,6 @@ namespace mcp {
                 }
             } catch (const std::exception& e) {
                 MCP_LOG_ERROR("Processing request error: {}", e.what());
-                // 发送错误响应
                 JsonRpcResponse resp;
                 resp.id = json(nullptr);
                 resp.error = JsonRpcError{
@@ -172,7 +170,6 @@ namespace mcp {
         resp.id = req.id.has_value() ? req.id.value() : json(nullptr);
 
         try {
-            // 检查method是否存在
             if (req.method.empty()) {
                 resp.error = JsonRpcError{
                     .code = jsonrpc_errc::InvalidRequest,

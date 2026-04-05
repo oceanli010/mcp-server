@@ -36,3 +36,16 @@ add_executable(mcp_server
 target_link_libraries(mcp_server
         mcp_lib
 )
+
+add_library(mcp_client_sdk STATIC
+        mcp_client/mcp_client.cpp
+)
+
+target_include_directories(mcp_client_sdk PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/mcp
+        ${CMAKE_CURRENT_SOURCE_DIR}/mcp_client
+)
+
+target_link_libraries(mcp_client_sdk
+        mcp_lib
+)
