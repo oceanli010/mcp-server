@@ -6,6 +6,7 @@
 #include "mcp_server.h"
 
 #include <curl/curl.h>
+#include <mysql/mysql.h>
 
 #include <iostream>
 #include <csignal>
@@ -16,6 +17,9 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <vector>
+#include <string>
+#include <stdexcept>
 
 using namespace mcp;
 
@@ -31,20 +35,16 @@ void signal_handler(const int signum) {
 }
 
 spdlog::level::level_enum stringToLogLevel(const std::string& level_str) {
-    if (level_str == "debug") {
-        return spdlog::level::debug;
-    } else if (level_str == "info") {
-        return spdlog::level::info;
-    } else if (level_str == "warn") {
-        return spdlog::level::warn;
-    } else if (level_str == "error") {
-        return spdlog::level::err;
-    } else if (level_str == "critical") {
-        return spdlog::level::critical;
-    } else if (level_str == "trace") {
-        return spdlog::level::trace;
-    }
-    return spdlog::level::info;
+    static const std::unordered_map<std::string, spdlog::level::level_enum> level_map = {
+        {"debug", spdlog::level::debug},
+        {"info", spdlog::level::info},
+        {"warn", spdlog::level::warn},
+        {"error", spdlog::level::err},
+        {"critical", spdlog::level::critical},
+        {"trace", spdlog::level::trace}
+    };
+    auto it = level_map.find(level_str);
+    return it != level_map.end() ? it->second : spdlog::level::info;
 }
 
 void setup_mcp_server(McpServer& mcp) {
@@ -58,12 +58,22 @@ void setup_mcp_server(McpServer& mcp) {
         tool.input_schema.requirements = {"message"};
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            ToolResult result;
-            result.content_items.push_back(ContentItem{
-                .type ="text",
-                .text = "Echo: " + args.at("message").get<std::string>()
-            });
-            return result;
+            try {
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type ="text",
+                    .text = "Echo: " + args.at("message").get<std::string>()
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
         });
     }
 
@@ -82,36 +92,54 @@ void setup_mcp_server(McpServer& mcp) {
         tool.input_schema.requirements = {"operation", "a", "b"};
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            std::string operation = args.at("operation").get<std::string>();
-            double a = args.at("a").get<double>();
-            double b = args.at("b").get<double>();
-            double result_val = 0;
+            try {
+                std::string operation = args.at("operation").get<std::string>();
+                double a = args.at("a").get<double>();
+                double b = args.at("b").get<double>();
+                double result_val = 0;
 
-            if (operation == "add") {
-                result_val = a + b;
-            } else if (operation == "subtract") {
-                result_val = a - b;
-            } else if (operation == "multiply") {
-                result_val = a * b;
-            } else if (operation == "divide") {
-                if (b == 0) {
+                if (operation == "add") {
+                    result_val = a + b;
+                } else if (operation == "subtract") {
+                    result_val = a - b;
+                } else if (operation == "multiply") {
+                    result_val = a * b;
+                } else if (operation == "divide") {
+                    if (b == 0) {
+                        ToolResult error;
+                        error.is_error = true;
+                        error.content_items.push_back(ContentItem{
+                            .type = "text",
+                            .text = "Error: Divide by zero"
+                        });
+                        return error;
+                    }
+                    result_val = a / b;
+                } else {
                     ToolResult error;
                     error.is_error = true;
                     error.content_items.push_back(ContentItem{
                         .type = "text",
-                        .text = "Error: Divide by zero"
+                        .text = "Error: Invalid operation"
                     });
                     return error;
                 }
-                result_val = a / b;
-            }
 
-            ToolResult result;
-            result.content_items.push_back(ContentItem{
-                .type ="text",
-                .text = std::to_string(result_val)
-            });
-            return result;
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type ="text",
+                    .text = std::to_string(result_val)
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
         });
     }
 
@@ -122,16 +150,26 @@ void setup_mcp_server(McpServer& mcp) {
         tool.input_schema.properties = json::object();
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            std::time_t now = std::time(nullptr);
-            char time_str[64];
-            std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+            try {
+                std::time_t now = std::time(nullptr);
+                char time_str[64];
+                std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
 
-            ToolResult result;
-            result.content_items.push_back(ContentItem{
-                .type ="text",
-                .text = time_str
-            });
-            return result;
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type ="text",
+                    .text = time_str
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
         });
     }
 
@@ -146,128 +184,139 @@ void setup_mcp_server(McpServer& mcp) {
         tool.input_schema.requirements = {"city"};
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            std::string city = args.at("city").get<std::string>();
-            std::string api_key = args.value("api_key", "853851dfd755466fbf743931260404");
-
-            // URL编码城市名称
-            std::string encoded_city;
-            for (char c : city) {
-                if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-                    encoded_city += c;
-                } else {
-                    char hex[4];
-                    snprintf(hex, sizeof(hex), "%%%02X", static_cast<unsigned char>(c));
-                    encoded_city += hex;
-                }
-            }
-
-            // 使用libcurl进行HTTP请求
-            CURL* curl = curl_easy_init();
-            if (!curl) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Error: Failed to initialize CURL"
-                });
-                return error;
-            }
-
-            // 使用WeatherAPI.com天气API
-            std::string weather_url = "https://api.weatherapi.com/v1/current.json?key=" + api_key +
-                                    "&q=" + encoded_city + "&aqi=no&lang=zh";
-        
-            std::string weather_response;
-            curl_easy_setopt(curl, CURLOPT_URL, weather_url.c_str());
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, size_t size, size_t nmemb, std::string* data) {
-                data->append(ptr, size * nmemb);
-                return size * nmemb;
-            });
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &weather_response);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-            curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-
-            CURLcode res = curl_easy_perform(curl);
-            curl_easy_cleanup(curl);
-        
-            if (res != CURLE_OK) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: HTTP request failed: ") + curl_easy_strerror(res)
-                });
-                return error;
-            }
-
-            // 解析天气数据
-            json weather_data;
             try {
-                weather_data = json::parse(weather_response);
+                std::string city = args.at("city").get<std::string>();
+                std::string api_key = args.value("api_key", "853851dfd755466fbf743931260404");
+
+                std::string encoded_city;
+                for (char c : city) {
+                    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+                        encoded_city += c;
+                    } else {
+                        char hex[4];
+                        snprintf(hex, sizeof(hex), "%%%02X", static_cast<unsigned char>(c));
+                        encoded_city += hex;
+                    }
+                }
+
+                struct CurlGuard {
+                    CURL* curl;
+                    CurlGuard(CURL* c) : curl(c) {}
+                    ~CurlGuard() { if (curl) curl_easy_cleanup(curl); }
+                };
+
+                CURL* curl = curl_easy_init();
+                if (!curl) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Failed to initialize CURL"
+                    });
+                    return error;
+                }
+                CurlGuard guard(curl);
+
+                std::string weather_url = "https://api.weatherapi.com/v1/current.json?key=" + api_key +
+                                        "&q=" + encoded_city + "&aqi=no&lang=zh";
+            
+                std::string weather_response;
+                curl_easy_setopt(curl, CURLOPT_URL, weather_url.c_str());
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, size_t size, size_t nmemb, std::string* data) {
+                    data->append(ptr, size * nmemb);
+                    return size * nmemb;
+                });
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &weather_response);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+                curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+                CURLcode res = curl_easy_perform(curl);
+            
+                if (res != CURLE_OK) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = std::string("Error: HTTP request failed: ") + curl_easy_strerror(res)
+                    });
+                    return error;
+                }
+
+                json weather_data;
+                try {
+                    weather_data = json::parse(weather_response);
+                } catch (const std::exception& e) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = std::string("Error: Failed to parse weather response: ") + e.what()
+                    });
+                    return error;
+                }
+
+                if (weather_data.contains("error")) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: " + weather_data["error"]["message"].get<std::string>()
+                    });
+                    return error;
+                }
+
+                if (!weather_data.contains("location") || !weather_data.contains("current")) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Invalid weather data received"
+                    });
+                    return error;
+                }
+
+                auto& location = weather_data["location"];
+                auto& current = weather_data["current"];
+            
+                std::string location_name = location["name"];
+                std::string country = location["country"];
+                double temperature = current["temp_c"];
+                double apparent_temp = current["feelslike_c"];
+                int humidity = current["humidity"];
+                double wind_speed = current["wind_kph"];
+                std::string wind_dir_str = current["wind_dir"];
+                std::string weather_desc = current["condition"]["text"];
+
+                std::ostringstream oss;
+                oss << "【" << location_name;
+                if (!country.empty()) {
+                    oss << ", " << country;
+                }
+                oss << "天气信息】\n";
+                oss << "天气状况: " << weather_desc << "\n";
+                oss << "温度: " << std::fixed << std::setprecision(1) << temperature << "°C\n";
+                oss << "体感温度: " << std::fixed << std::setprecision(1) << apparent_temp << "°C\n";
+                oss << "湿度: " << humidity << "%\n";
+                oss << "风速: " << std::fixed << std::setprecision(1) << wind_speed << " km/h\n";
+                oss << "风向: " << wind_dir_str;
+
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = oss.str()
+                });
+                return result;
             } catch (const std::exception& e) {
                 ToolResult error;
                 error.is_error = true;
                 error.content_items.push_back(ContentItem{
                     .type = "text",
-                    .text = std::string("Error: Failed to parse weather response: ") + e.what()
+                    .text = std::string("Error: ") + e.what()
                 });
                 return error;
             }
-
-            if (weather_data.contains("error")) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Error: " + weather_data["error"]["message"].get<std::string>()
-                });
-                return error;
-            }
-
-            if (!weather_data.contains("location") || !weather_data.contains("current")) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Error: Invalid weather data received"
-                });
-                return error;
-            }
-
-            auto& location = weather_data["location"];
-            auto& current = weather_data["current"];
-        
-            std::string location_name = location["name"];
-            std::string country = location["country"];
-            double temperature = current["temp_c"];
-            double apparent_temp = current["feelslike_c"];
-            int humidity = current["humidity"];
-            double wind_speed = current["wind_kph"];
-            std::string wind_dir_str = current["wind_dir"];
-            std::string weather_desc = current["condition"]["text"];
-
-            // 构建天气信息字符串
-            std::ostringstream oss;
-            oss << "【" << location_name;
-            if (!country.empty()) {
-                oss << ", " << country;
-            }
-            oss << "天气信息】\n";
-            oss << "天气状况: " << weather_desc << "\n";
-            oss << "温度: " << std::fixed << std::setprecision(1) << temperature << "°C\n";
-            oss << "体感温度: " << std::fixed << std::setprecision(1) << apparent_temp << "°C\n";
-            oss << "湿度: " << humidity << "%\n";
-            oss << "风速: " << std::fixed << std::setprecision(1) << wind_speed << " km/h\n";
-            oss << "风向: " << wind_dir_str;
-
-            ToolResult result;
-            result.content_items.push_back(ContentItem{
-                .type = "text",
-                .text = oss.str()
-            });
-            return result;
         });
     }
 
@@ -277,40 +326,545 @@ void setup_mcp_server(McpServer& mcp) {
         tool.description = "Write content to a file";
         tool.input_schema.properties = {
             {"path", {{"type", "string"}, {"description", "File path to write to"}}},
-            {"context", {{"type", "string"}, {"description", "Content to write to the file"}}}
+            {"content", {{"type", "string"}, {"description", "Content to write to the file"}}}
         };
-        tool.input_schema.requirements = {"path", "context"};
+        tool.input_schema.requirements = {"path", "content"};
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            std::string path =args.at("path").get<std::string>();
-            std::string context = args.at("context").get<std::string>();
-            ToolResult result;
-
             try {
-                std::ofstream file(path);
-                if (!file.is_open()) {
+                std::string path = args.at("path").get<std::string>();
+                std::string content = args.at("content").get<std::string>();
+                ToolResult result;
+
+                if (path.find("../") != std::string::npos) {
                     result.is_error = true;
                     result.content_items.push_back(ContentItem{
                         .type = "text",
-                        .text = "Error: Failed to open file for writing"
+                        .text = "Error: Invalid file path"
                     });
                     return result;
                 }
 
-                file << context;
-                file.close();
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Successfully wrote to file: " + path
-                });
+                try {
+                    std::ofstream file(path);
+                    if (!file.is_open()) {
+                        result.is_error = true;
+                        result.content_items.push_back(ContentItem{
+                            .type = "text",
+                            .text = "Error: Failed to open file for writing"
+                        });
+                        return result;
+                    }
+
+                    file << content;
+                    file.close();
+                    result.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Successfully wrote to file: " + path
+                    });
+                } catch (const std::exception& e) {
+                    result.is_error = true;
+                    result.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = std::string("Error: ") + e.what()
+                    });
+                }
+                return result;
             } catch (const std::exception& e) {
-                result.is_error = true;
-                result.content_items.push_back(ContentItem{
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
                     .type = "text",
                     .text = std::string("Error: ") + e.what()
                 });
+                return error;
             }
-            return result;
+        });
+    }
+
+    {
+        Tool tool;
+        tool.name = "get_cpu_info";
+        tool.description = "Get CPU resource information";
+        tool.input_schema.properties = json::object();
+
+        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+            try {
+                ToolResult result;
+                std::ostringstream oss;
+
+                std::ifstream cpuinfo("/proc/cpuinfo");
+                if (cpuinfo.is_open()) {
+                    std::string line;
+                    while (std::getline(cpuinfo, line)) {
+                        if (line.find("model name") == 0) {
+                            oss << "CPU Model: " << line.substr(line.find(":") + 2) << "\n";
+                            break;
+                        }
+                    }
+                    cpuinfo.close();
+                }
+
+                std::ifstream stat("/proc/stat");
+                if (stat.is_open()) {
+                    int core_count = 0;
+                    std::string line;
+                    while (std::getline(stat, line)) {
+                        if (line.substr(0, 3) == "cpu" && line.length() > 3 && isdigit(line[3])) {
+                            core_count++;
+                        }
+                    }
+                    stat.close();
+                    oss << "CPU Cores: " << core_count << "\n";
+                }
+
+                std::ifstream stat_file("/proc/stat");
+                if (stat_file.is_open()) {
+                    std::string line;
+                    std::getline(stat_file, line);
+                    stat_file.close();
+
+                    std::istringstream iss(line);
+                    std::string cpu; 
+                    long user, nice, system, idle, iowait, irq, softirq;
+                    iss >> cpu >> user >> nice >> system >> idle >> iowait >> irq >> softirq;
+
+                    long total = user + nice + system + idle + iowait + irq + softirq;
+                    double usage = 100.0 * (total - idle) / total;
+                    oss << "CPU Usage: " << std::fixed << std::setprecision(2) << usage << "%\n";
+                }
+
+                std::ifstream temp_file("/sys/class/thermal/thermal_zone0/temp");
+                if (temp_file.is_open()) {
+                    int temp;
+                    temp_file >> temp;
+                    temp_file.close();
+                    double temp_c = temp / 1000.0;
+                    oss << "CPU Temperature: " << std::fixed << std::setprecision(1) << temp_c << "°C\n";
+                }
+
+                std::ifstream loadavg("/proc/loadavg");
+                if (loadavg.is_open()) {
+                    double load1, load5, load15;
+                    loadavg >> load1 >> load5 >> load15;
+                    loadavg.close();
+                    oss << "Load Average (1/5/15 min): " << load1 << "/" << load5 << "/" << load15 << "\n";
+                }
+
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = oss.str()
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
+        });
+    }
+
+    {
+        Tool tool;
+        tool.name = "mysql_connect";
+        tool.description = "Connect to MySQL database";
+        tool.input_schema.properties = {
+            {"host", {{"type", "string"}, {"description", "Database host address"}}},
+            {"port", {{"type", "integer"}, {"description", "Database port"}}},
+            {"user", {{"type", "string"}, {"description", "Database username"}}},
+            {"password", {{"type", "string"}, {"description", "Database password"}}},
+            {"database", {{"type", "string"}, {"description", "Database name"}}}
+        };
+        tool.input_schema.requirements = {"host", "port", "user", "password", "database"};
+
+        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+            try {
+                std::string host = args.at("host").get<std::string>();
+                int port = args.at("port").get<int>();
+                std::string user = args.at("user").get<std::string>();
+                std::string password = args.at("password").get<std::string>();
+                std::string database = args.at("database").get<std::string>();
+
+                MYSQL* conn = mysql_init(nullptr);
+                if (!conn) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Failed to initialize MySQL connection"
+                    });
+                    return error;
+                }
+
+                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
+                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                mysql_close(conn);
+
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = "Successfully connected to MySQL database: " + database
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
+        });
+    }
+
+    {
+        Tool tool;
+        tool.name = "mysql_query";
+        tool.description = "Execute MySQL query";
+        tool.input_schema.properties = {
+            {"host", {{"type", "string"}, {"description", "Database host address"}}},
+            {"port", {{"type", "integer"}, {"description", "Database port"}}},
+            {"user", {{"type", "string"}, {"description", "Database username"}}},
+            {"password", {{"type", "string"}, {"description", "Database password"}}},
+            {"database", {{"type", "string"}, {"description", "Database name"}}},
+            {"query", {{"type", "string"}, {"description", "SQL query to execute"}}}
+        };
+        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "query"};
+
+        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+            try {
+                std::string host = args.at("host").get<std::string>();
+                int port = args.at("port").get<int>();
+                std::string user = args.at("user").get<std::string>();
+                std::string password = args.at("password").get<std::string>();
+                std::string database = args.at("database").get<std::string>();
+                std::string query = args.at("query").get<std::string>();
+
+                MYSQL* conn = mysql_init(nullptr);
+                if (!conn) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Failed to initialize MySQL connection"
+                    });
+                    return error;
+                }
+
+                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
+                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                if (mysql_query(conn, query.c_str())) {
+                    std::string error_msg = "Error: Failed to execute query: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                MYSQL_RES* result_set = mysql_store_result(conn);
+                std::string result_text;
+
+                if (result_set) {
+                    int num_fields = mysql_num_fields(result_set);
+                    MYSQL_ROW row;
+
+                    while ((row = mysql_fetch_row(result_set))) {
+                        for (int i = 0; i < num_fields; i++) {
+                            if (i > 0) result_text += ", ";
+                            result_text += row[i] ? row[i] : "NULL";
+                        }
+                        result_text += "\n";
+                    }
+
+                    mysql_free_result(result_set);
+                } else {
+                    if (mysql_field_count(conn) == 0) {
+                        result_text = "Query executed successfully. Affected rows: " + std::to_string(mysql_affected_rows(conn));
+                    } else {
+                        std::string error_msg = "Error: Failed to get result set: " + std::string(mysql_error(conn));
+                        mysql_close(conn);
+                        ToolResult error;
+                        error.is_error = true;
+                        error.content_items.push_back(ContentItem{
+                            .type = "text",
+                            .text = error_msg
+                        });
+                        return error;
+                    }
+                }
+
+                mysql_close(conn);
+
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = result_text
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
+        });
+    }
+
+    {
+        Tool tool;
+        tool.name = "mysql_insert";
+        tool.description = "Insert data into MySQL table";
+        tool.input_schema.properties = {
+            {"host", {{"type", "string"}, {"description", "Database host address"}}},
+            {"port", {{"type", "integer"}, {"description", "Database port"}}},
+            {"user", {{"type", "string"}, {"description", "Database username"}}},
+            {"password", {{"type", "string"}, {"description", "Database password"}}},
+            {"database", {{"type", "string"}, {"description", "Database name"}}},
+            {"table", {{"type", "string"}, {"description", "Table name"}}},
+            {"columns", {{"type", "array"}, {"description", "Column names"}}},
+            {"values", {{"type", "array"}, {"description", "Values to insert"}}}
+        };
+        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "table", "columns", "values"};
+
+        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+            try {
+                std::string host = args.at("host").get<std::string>();
+                int port = args.at("port").get<int>();
+                std::string user = args.at("user").get<std::string>();
+                std::string password = args.at("password").get<std::string>();
+                std::string database = args.at("database").get<std::string>();
+                std::string table = args.at("table").get<std::string>();
+                json columns = args.at("columns");
+                json values = args.at("values");
+
+                if (!columns.is_array() || !values.is_array()) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Columns and values must be arrays"
+                    });
+                    return error;
+                }
+
+                if (columns.size() != values.size()) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Number of columns must match number of values"
+                    });
+                    return error;
+                }
+
+                std::string query = "INSERT INTO " + table + " (";
+                for (size_t i = 0; i < columns.size(); i++) {
+                    if (i > 0) query += ", ";
+                    query += columns[i].get<std::string>();
+                }
+                query += ") VALUES (";
+                for (size_t i = 0; i < values.size(); i++) {
+                    if (i > 0) query += ", ";
+                    if (values[i].is_string()) {
+                        query += "'" + values[i].get<std::string>() + "'";
+                    } else {
+                        query += values[i].dump();
+                    }
+                }
+                query += ")";
+
+                MYSQL* conn = mysql_init(nullptr);
+                if (!conn) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Failed to initialize MySQL connection"
+                    });
+                    return error;
+                }
+
+                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
+                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                if (mysql_query(conn, query.c_str())) {
+                    std::string error_msg = "Error: Failed to execute insert: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                long long inserted_id = mysql_insert_id(conn);
+                mysql_close(conn);
+
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = "Insert successful. Inserted ID: " + std::to_string(inserted_id)
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
+        });
+    }
+
+    {
+        Tool tool;
+        tool.name = "mysql_update";
+        tool.description = "Update data in MySQL table";
+        tool.input_schema.properties = {
+            {"host", {{"type", "string"}, {"description", "Database host address"}}},
+            {"port", {{"type", "integer"}, {"description", "Database port"}}},
+            {"user", {{"type", "string"}, {"description", "Database username"}}},
+            {"password", {{"type", "string"}, {"description", "Database password"}}},
+            {"database", {{"type", "string"}, {"description", "Database name"}}},
+            {"table", {{"type", "string"}, {"description", "Table name"}}},
+            {"set", {{"type", "object"}, {"description", "Column-value pairs to update"}}},
+            {"where", {{"type", "string"}, {"description", "WHERE clause"}}}
+        };
+        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "table", "set", "where"};
+
+        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+            try {
+                std::string host = args.at("host").get<std::string>();
+                int port = args.at("port").get<int>();
+                std::string user = args.at("user").get<std::string>();
+                std::string password = args.at("password").get<std::string>();
+                std::string database = args.at("database").get<std::string>();
+                std::string table = args.at("table").get<std::string>();
+                json set_data = args.at("set");
+                std::string where_clause = args.at("where").get<std::string>();
+
+                if (!set_data.is_object()) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: SET data must be an object"
+                    });
+                    return error;
+                }
+
+                std::string query = "UPDATE " + table + " SET ";
+                bool first = true;
+                for (auto& [key, value] : set_data.items()) {
+                    if (!first) query += ", ";
+                    query += key + " = ";
+                    if (value.is_string()) {
+                        query += "'" + value.get<std::string>() + "'";
+                    } else {
+                        query += value.dump();
+                    }
+                    first = false;
+                }
+                query += " WHERE " + where_clause;
+
+                MYSQL* conn = mysql_init(nullptr);
+                if (!conn) {
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = "Error: Failed to initialize MySQL connection"
+                    });
+                    return error;
+                }
+
+                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
+                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                if (mysql_query(conn, query.c_str())) {
+                    std::string error_msg = "Error: Failed to execute update: " + std::string(mysql_error(conn));
+                    mysql_close(conn);
+                    ToolResult error;
+                    error.is_error = true;
+                    error.content_items.push_back(ContentItem{
+                        .type = "text",
+                        .text = error_msg
+                    });
+                    return error;
+                }
+
+                long long affected_rows = mysql_affected_rows(conn);
+                mysql_close(conn);
+
+                ToolResult result;
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = "Update successful. Affected rows: " + std::to_string(affected_rows)
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
         });
     }
 
@@ -322,20 +876,28 @@ void setup_mcp_server(McpServer& mcp) {
         resources.mime_type = "text/plain";
 
         mcp.register_resource(resources, [](const std::string& uri) -> ResourcesContent {
-            ResourcesContent content;
-            content.uri = uri;
-            content.mime_type = "text/plain";
+            try {
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "text/plain";
 
-            std::ostringstream oss;
-            oss << "MCP Server - System Info\n";
-            oss << "========================\n";
-            std::time_t now = std::time(nullptr);
-            char buf[100];
-            std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-            oss << "Time: " << buf << "\n";
+                std::ostringstream oss;
+                oss << "MCP Server - System Info\n";
+                oss << "========================\n";
+                std::time_t now = std::time(nullptr);
+                char buf[100];
+                std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+                oss << "Time: " << buf << "\n";
 
-            content.text = oss.str();
-            return content;
+                content.text = oss.str();
+                return content;
+            } catch (const std::exception& e) {
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "text/plain";
+                content.text = std::string("Error: ") + e.what();
+                return content;
+            }
         });
     }
 
@@ -346,14 +908,22 @@ void setup_mcp_server(McpServer& mcp) {
         resources.mime_type = "application/json";
 
         mcp.register_resource(resources, [](const std::string& uri) -> ResourcesContent {
-            ResourcesContent content;
-            content.uri = uri;
-            content.mime_type = "application/json";
-            content.text = json({
-                {"port", MCP_CONFIG.getServerPort()},
-                {"log_level", MCP_CONFIG.getLogLevel()},
-            }).dump(2);
-            return content;
+            try {
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "application/json";
+                content.text = json({
+                    {"port", MCP_CONFIG.getServerPort()},
+                    {"log_level", MCP_CONFIG.getLogLevel()},
+                }).dump(2);
+                return content;
+            } catch (const std::exception& e) {
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "application/json";
+                json error_json; error_json["error"] = e.what(); content.text = error_json.dump(2);
+                return content;
+            }
         });
     }
 
@@ -365,15 +935,27 @@ void setup_mcp_server(McpServer& mcp) {
         prompt.arguments.push_back(PromptArgument{.name = "language", .required = true});
 
         mcp.register_prompt(prompt, [](const json& args) -> std::vector<PromptMessage> {
-            std::vector<PromptMessage> msgs;
-            PromptMessage msg;
-            msg.role =Role::User;
-            msg.content = {
-                {"type", "text"},
-                {"text", "Please review this " + args.at("language").get<std::string>() + " code:\n\n" + args.at("code").get<std::string>()}
-            };
-            msgs.push_back(msg);
-            return msgs;
+            try {
+                std::vector<PromptMessage> msgs;
+                PromptMessage msg;
+                msg.role = Role::User;
+                msg.content = {
+                    {"type", "text"},
+                    {"text", "Please review this " + args.at("language").get<std::string>() + " code:\n\n" + args.at("code").get<std::string>()}
+                };
+                msgs.push_back(msg);
+                return msgs;
+            } catch (const std::exception& e) {
+                std::vector<PromptMessage> msgs;
+                PromptMessage msg;
+                msg.role = Role::User;
+                msg.content = {
+                    {"type", "text"},
+                    {"text", std::string("Error: ") + e.what()}
+                };
+                msgs.push_back(msg);
+                return msgs;
+            }
         });
     }
 
@@ -516,14 +1098,22 @@ void run_stdio_mode(McpServer& mcp_server) {
 
 void run_both_mode(McpServer& mcp_server, const std::string& host, int port) {
     MCP_LOG_INFO("Starting both HTTP and stdio servers");
-    std::thread http_thread([&mcp_server, &host, port] {
-        run_http_mode(mcp_server, host, port);
-    });
-
-    run_stdio_mode(mcp_server);
-
-    if (http_thread.joinable()) {
-        http_thread.join();
+    std::thread http_thread;
+    try {
+        http_thread = std::thread([&mcp_server, &host, port] {
+            run_http_mode(mcp_server, host, port);
+        });
+        
+        run_stdio_mode(mcp_server);
+        
+        if (http_thread.joinable()) {
+            http_thread.join();
+        }
+    } catch (const std::exception& e) {
+        MCP_LOG_ERROR("Exception in both mode: {}", e.what());
+        if (http_thread.joinable()) {
+            http_thread.join();
+        }
     }
 }
 

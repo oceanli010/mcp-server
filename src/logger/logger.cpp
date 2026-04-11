@@ -37,7 +37,9 @@ namespace mcp {
                 if (!log_file_path.empty()) {
                     std::filesystem::path log_path(log_file_path);
                     std::filesystem::path log_dir = log_path.parent_path();
-                    std::filesystem::create_directories(log_dir);
+                    if (!log_dir.empty()) {
+                        std::filesystem::create_directories(log_dir);
+                    }
                     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, max_file_size, max_file_count);
                     file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v]");
                     sinks.push_back(file_sink);

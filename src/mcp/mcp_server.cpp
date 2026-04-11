@@ -151,6 +151,7 @@ namespace mcp {
         auto it = prompt_generators_.find(name);
         if (it == prompt_generators_.end()) {
             MCP_LOG_ERROR("Prompt not found: {}", name);
+            throw std::runtime_error("McpServer::get_prompt:" + name + " not registered");
         }
         MCP_LOG_INFO("Prompt found: {}", name);
 

@@ -13,7 +13,6 @@ namespace mcp {
         void init(const std::vector<std::string>& api_keys);
         
         bool validateApiKey(const std::string& api_key) const;
-        
         bool isEnabled() const;
         
         void addApiKey(const std::string& api_key);

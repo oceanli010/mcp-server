@@ -11,6 +11,23 @@
 #include <utility>
 
 namespace mcp {
+
+    enum class HeaderType {
+        UNKNOWN,
+        CONTENT_LENGTH,
+        CONTENT_TYPE
+    };
+
+    HeaderType getHeaderType(const std::string& key) {
+        if (key == "content-length") {
+            return HeaderType::CONTENT_LENGTH;
+        }
+        if (key == "content-type") {
+            return HeaderType::CONTENT_TYPE;
+        }
+        return HeaderType::UNKNOWN;
+    }
+
     void JsonRpcDispatcher::registerHandler(const std::string& method, Handler handler) {
         std::lock_guard<std::mutex> lock(mutex_);
         handlers_[method] = std::move(handler);
@@ -67,7 +84,8 @@ namespace mcp {
 
             std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
             std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
-            if (key == "content-length") {
+            HeaderType headerType = getHeaderType(key);
+            if (headerType == HeaderType::CONTENT_LENGTH) {
                 try {
                     content_length = static_cast<size_t>(std::stoul(value));
                     found_content_length = true;
@@ -75,7 +93,7 @@ namespace mcp {
                     MCP_LOG_ERROR("Invalid content length: {}", value);
                     return false;
                 }
-            } else if (key == "content-type") {
+            } else if (headerType == HeaderType::CONTENT_TYPE) {
                 MCP_LOG_DEBUG("Content-type: {}", value);
             } else {
                 MCP_LOG_DEBUG("Ignore Header: {}:{}", key, value);
