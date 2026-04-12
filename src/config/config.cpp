@@ -8,6 +8,7 @@
 #define MAX_PORT 65535
 
 namespace mcp {
+    //单例模式，创建全局唯一实例
     Config& Config::getInstance() {
         static Config instance;
         return instance;
@@ -18,17 +19,21 @@ namespace mcp {
         config_file_path_ = config_file_path;
 
         try {
+            //创建输入文件流，读取配置文件信息
             std::ifstream config_file(config_file_path_);
             if (!config_file.is_open()) {
                 MCP_LOG_ERROR("Failed to open config file: " + config_file_path_);
                 return false;
             }
 
+            //将配置信息写入config_data_
             config_file >> config_data_;
             config_file.close();
 
+            //设置默认值
             setDefaults();
 
+            //检测配置是否合法
             if (!validateConfig()) {
                 MCP_LOG_ERROR("Failed to validate config file: " + config_file_path_);
                 return false;
@@ -43,17 +48,20 @@ namespace mcp {
     }
 
     bool Config::validateConfig() const {
+        //检查server字段是否存在
         if (!config_data_.contains("server")) {
             MCP_LOG_ERROR("Invalid server configuration");
             return false;
         }
 
+        //检查端口号合法性
         int port = config_data_["server"].value("port", 8080);
         if (port < MIN_PORT || port > MAX_PORT) {
             MCP_LOG_ERROR("Invalid port number: ", port);
             return false;
         }
 
+        //检查logging字段合法性
         if (config_data_.contains("logging")) {
             std::string log_level = config_data_["logging"].value("log_level", std::string("info"));
             if (log_level != "info" && log_level != "debug" && log_level != "trace"&&
@@ -72,11 +80,12 @@ namespace mcp {
         return true;
     }
 
+    //设置默认值
     void Config::setDefaults() {
         if (config_data_.contains("server")) {
             auto& server = config_data_["server"];
             if (!server.contains("port")) {
-                server["port"] = 8080;
+                server["port"] = 8080;  //默认端口号
             }
         }
 

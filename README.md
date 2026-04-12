@@ -26,10 +26,7 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 - `calculate`：执行基本算术运算
 - `echo`：回显输入消息
 - `write_file`：写入内容到文件
-- `mysql_connect`：连接到MySQL数据库
-- `mysql_query`：执行MySQL查询
-- `mysql_insert`：插入数据到MySQL表
-- `mysql_update`：更新MySQL表中的数据
+
 
 ## 安装步骤
 
@@ -37,7 +34,6 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 
 - C++17 或更高版本
 - CMake 3.16 或更高版本
-- MySQL 客户端库（用于数据库工具）
 - Python 3.7 或更高版本（用于客户端）
 - Ollama（用于大语言模型集成）
 
@@ -46,7 +42,7 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 1. **克隆代码库**
 
    ```bash
-   git clone <repository-url>
+   git clone 
    cd mcp_server
    ```
 
@@ -55,12 +51,6 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
    ```bash
    # 使用提供的构建脚本
    ./build.sh
-   
-   # 或手动构建
-   mkdir -p build
-   cd build
-   cmake ..
-   make -j4
    ```
 
 3. **配置服务器**
@@ -78,14 +68,11 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
        "log_file_size": 52428800,
        "log_file_count": 5,
        "log_console_output": true
-     }
+     },
+     "auth": {
+       "api_keys": "your-api-keys"
+    }
    }
-   ```
-
-4. **启动服务器**
-
-   ```bash
-   ./build/src/mcp_server --config config/server.json
    ```
 
 ### 客户端安装
@@ -105,6 +92,7 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
    ```bash
    ollama pull qwen2.5:1.5b
    ```
+   > 也可以使用其他的模型
 
 ## 使用指南
 
@@ -118,7 +106,7 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 
 2. **验证服务器运行状态**
 
-   服务器启动后，会在指定端口（默认为 8089）监听 JSON-RPC 请求。
+   服务器启动后，会在指定端口（默认为 8080）监听 JSON-RPC 请求。
 
 ### 客户端使用
 
@@ -135,15 +123,11 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
    ```
    MCP-Ollama Client
    Using model: qwen2.5:1.5b
-   MCP Server: http://localhost:8089/jsonrpc
-   Available tools: 10
-   - mysql_update: Update data in MySQL table
-   - mysql_insert: Insert data into MySQL table
-   - mysql_query: Execute MySQL query
+   MCP Server: http://localhost:8080/jsonrpc
+   Available tools: 6
    - get_cpu_info: Get CPU resource information
    - write_file: Write content to a file
    - get_weather: Get weather information for a city
-   - mysql_connect: Connect to MySQL database
    - get_time: Get the current time
    - calculate: Perform basic arithmetic operations
    - echo: Echo back the input message
@@ -191,12 +175,12 @@ class MCPOllamaClient:
 
 主要配置参数：
 
-| 参数 | 说明 | 默认值 |
-|------|------|-------|
-| `mcp_url` | MCP Server 的 JSON-RPC 接口地址 | http://localhost:8089/jsonrpc |
-| `mcp_api_key` | MCP Server 的 API 密钥（如果需要） | None |
-| `ollama_url` | Ollama API 地址 | http://localhost:11434/api |
-| `ollama_model` | 使用的 Ollama 模型 | qwen2.5:1.5b |
+| 参数 | 说明 | 默认值                           |
+|------|------|-------------------------------|
+| `mcp_url` | MCP Server 的 JSON-RPC 接口地址 | http://localhost:8080/jsonrpc |
+| `mcp_api_key` | MCP Server 的 API 密钥（如果需要） | None                          |
+| `ollama_url` | Ollama API 地址 | http://localhost:11434/api    |
+| `ollama_model` | 使用的 Ollama 模型 | qwen2.5:1.5b                  |
 
 ## 常见问题解答 (FAQ)
 
@@ -218,6 +202,7 @@ class MCPOllamaClient:
 1. 工具参数不正确
 2. 工具依赖的服务不可用（如 MySQL 数据库）
 3. 工具执行过程中出现错误
+4. 如果工具存在但是模型未主动调用，请调整mcp_ollama_client.py的提示词后重试
 
 请检查客户端输出的错误信息，了解具体失败原因。
 
@@ -228,59 +213,10 @@ class MCPOllamaClient:
 2. 确保工具实现符合 MCP Server 的工具接口规范
 3. 重启服务器后，客户端会自动发现新工具
 
-## 贡献指南
+## 项目优化
+本项目仍存在一些可以优化或拓展的地方：
+- 部分连接未设置超时机制
+- 未添加多线程支持
+- 安全认证机制不够完善
 
-### 代码风格
-
-- C++ 代码：遵循 Google C++ 风格指南
-- Python 代码：遵循 PEP 8 风格指南
-
-### 提交规范
-
-提交代码时，请使用清晰的提交信息，格式为：
-
-```
-<类型>: <描述>
-
-<详细说明>
-```
-
-类型包括：
-- `feat`：新功能
-- `fix`：修复 bug
-- `docs`：文档更新
-- `style`：代码风格调整
-- `refactor`：代码重构
-- `test`：测试相关
-- `chore`：其他变更
-
-### 开发流程
-
-1. Fork 代码库
-2. 创建功能分支
-3. 实现功能或修复 bug
-4. 编写测试
-5. 提交代码
-6. 创建 Pull Request
-
-### 问题报告
-
-如果您发现问题或有功能建议，请在 GitHub Issues 中提交。提交时请包含：
-- 问题描述
-- 复现步骤
-- 预期行为
-- 实际行为
-- 环境信息
-
-## 许可证
-
-本项目采用 MIT 许可证。详情请查看 LICENSE 文件。
-
-## 联系方式
-
-- 项目地址：<repository-url>
-- 问题反馈：<repository-url>/issues
-
----
-
-感谢您使用 MCP Server 项目！
+如果你有更多建议，欢迎提交issue或PR交流

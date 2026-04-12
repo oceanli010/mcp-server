@@ -1,3 +1,6 @@
+///日志模块
+///用于记录MCP运行期间的事件
+
 #pragma once
 
 #include <spdlog/spdlog.h>
@@ -28,7 +31,9 @@ namespace mcp {
             //获取日志实例
             std::shared_ptr<spdlog::logger> getLogger();
 
+            //刷新日志缓存
             void flush();
+            //关闭日志
             void shutdown();
 
             Logger(const Logger&) = delete;
@@ -43,6 +48,8 @@ namespace mcp {
         };
     }
 }
+
+//便于使用的宏定义
 
 #define MCP_LOG_INIT(name, ...) \
     mcp::logger::Logger::getInstance().init(name, __VA_ARGS__)

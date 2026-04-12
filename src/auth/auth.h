@@ -1,3 +1,6 @@
+///API认证模块
+///对请求进行认证检查
+
 #pragma once
 
 #include <string>
@@ -12,11 +15,11 @@ namespace mcp {
 
         void init(const std::vector<std::string>& api_keys);
         
-        bool validateApiKey(const std::string& api_key) const;
+        bool validateApiKey(const std::string& api_key) const; //验证API Key
         bool isEnabled() const;
         
-        void addApiKey(const std::string& api_key);
-        void removeApiKey(const std::string& api_key);
+        void addApiKey(const std::string& api_key);     //添加API Key
+        void removeApiKey(const std::string& api_key);  //移除API Key
         std::vector<std::string> listApiKeys() const;
         
         AuthManager(const AuthManager&) = delete;

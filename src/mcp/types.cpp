@@ -2,7 +2,6 @@
 
 namespace mcp {
 
-    // ToolInputSchema implementation
     json ToolInputSchema::to_json() const {
         json j;
         j["type"] = type;
@@ -25,7 +24,6 @@ namespace mcp {
         return schema;
     }
 
-    // Tool implementation
     json Tool::to_json() const {
         json j;
         j["name"] = name;
@@ -44,7 +42,6 @@ namespace mcp {
         return tool;
     }
 
-    // ContentItem implementation
     json ContentItem::to_json() const {
         json j;
         j["type"] = type;
@@ -65,7 +62,6 @@ namespace mcp {
         return item;
     }
 
-    // ToolResult implementation
     json ToolResult::to_json() const {
         json j;
         j["type"] = is_error ? "error" : "result";
@@ -87,7 +83,6 @@ namespace mcp {
         return result;
     }
 
-    // Resources implementation
     json Resources::to_json() const {
         json j;
         j["uri"] = uri;
@@ -106,7 +101,6 @@ namespace mcp {
         return resources;
     }
 
-    // ResourcesContent implementation
     json ResourcesContent::to_json() const {
         json j = {
             {"uri", uri},
@@ -131,7 +125,6 @@ namespace mcp {
         return content;
     }
 
-    // PromptArgument implementation
     json PromptArgument::to_json() const {
         json j;
         j["name"] = name;
@@ -150,7 +143,6 @@ namespace mcp {
         return arg;
     }
 
-    // Prompt implementation
     json Prompt::to_json() const {
         json j;
         j["name"] = name;
@@ -177,7 +169,6 @@ namespace mcp {
         return prompt;
     }
 
-    // PromptMessage implementation
     json PromptMessage::to_json() const {
         json j;
         j["role"] = (role == Role::User) ? "user" : "assistant";
@@ -193,7 +184,6 @@ namespace mcp {
         return message;
     }
 
-    // ServerCapabilities::ToolCapabilities implementation
     json ServerCapabilities::ToolCapabilities::to_json() const {
         json j;
         j["list_changed"] = list_changed;
@@ -206,7 +196,6 @@ namespace mcp {
         return capabilities;
     }
 
-    // ServerCapabilities::ResourcesCapabilities implementation
     json ServerCapabilities::ResourcesCapabilities::to_json() const {
         json j;
         j["subscribed"] = subscribed;
@@ -221,7 +210,6 @@ namespace mcp {
         return capabilities;
     }
 
-    // ServerCapabilities::PromptCapabilities implementation
     json ServerCapabilities::PromptCapabilities::to_json() const {
         json j;
         j["list_changed"] = list_changed;
@@ -234,7 +222,6 @@ namespace mcp {
         return capabilities;
     }
 
-    // ServerCapabilities implementation
     json ServerCapabilities::to_json() const {
         json j;
         if (tool_capabilities) j["tool_capabilities"] = tool_capabilities->to_json();
@@ -261,7 +248,6 @@ namespace mcp {
         return capabilities;
     }
 
-    // ServerInfo implementation
     json ServerInfo::to_json() const {
         json j;
         j["name"] = name;
@@ -276,7 +262,6 @@ namespace mcp {
         return info;
     }
 
-    // InitializeResult implementation
     json InitializeResult::to_json() const {
         json j;
         j["version"] = version;

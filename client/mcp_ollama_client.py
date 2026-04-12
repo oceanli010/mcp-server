@@ -2,7 +2,7 @@ import json
 import requests
 
 class MCPClient:
-    def __init__(self, url="http://localhost:8089/jsonrpc", api_key=None):
+    def __init__(self, url="http://localhost:8080/jsonrpc", api_key=None):
         self.url = url
         self.api_key = api_key
         self.headers = {
@@ -60,9 +60,7 @@ class OllamaClient:
         self.model = model
     
     def generate(self, prompt, tools=None, tool_choice="auto", format=None):
-        """
-        生成响应，支持工具使用和结构化输出
-        """
+
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -99,7 +97,7 @@ class OllamaClient:
         return response.json()
 
 class MCPOllamaClient:
-    def __init__(self, mcp_url="http://localhost:8089/jsonrpc", mcp_api_key=None, 
+    def __init__(self, mcp_url="http://localhost:8080/jsonrpc", mcp_api_key=None, 
                  ollama_url="http://localhost:11434/api", ollama_model="qwen2.5:1.5b"):
         self.mcp_client = MCPClient(mcp_url, mcp_api_key)
         self.ollama_client = OllamaClient(ollama_url, ollama_model)

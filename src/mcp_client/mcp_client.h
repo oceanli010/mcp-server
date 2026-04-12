@@ -1,3 +1,6 @@
+///MCP 客户端
+///方便其他程序调用 MCP 服务器
+
 #pragma once
 
 #include "types.h"
@@ -7,17 +10,20 @@
 #include <vector>
 
 namespace mcp {
+    //接口抽象化
     class TransPort {
     public:
         virtual ~TransPort() = default;
         virtual json send(const json& request) = 0;
     };
 
+    //HTTP传输实现
     class HttpTransPort : public TransPort {
     public:
         HttpTransPort(const std::string& host, int port);
-        ~HttpTransPort();
+        ~HttpTransPort() override;
 
+        //发送POST请求至 /jsonrpc 端点
         json send(const json& request) override;
 
     private:
@@ -25,6 +31,7 @@ namespace mcp {
         std::unique_ptr<Impl_> impl_;
     };
 
+    //MCP客户端实现
     class McpClient {
     public:
         McpClient(const std::string& host, int port);
@@ -47,6 +54,7 @@ namespace mcp {
         McpClient& operator=(const McpClient&) = delete;
 
     private:
+        //方法调用请求
         json send_request(const std::string& method, const json& params);
 
         std::unique_ptr<HttpTransPort> transport_;

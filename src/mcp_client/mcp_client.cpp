@@ -5,6 +5,7 @@
 #include "logger.h"
 
 namespace mcp {
+    //http接口实现
     class HttpTransPort::Impl_ {
     public:
         Impl_(const std::string& host, int port) : host_(host), port_(port), client_(host, port) {
@@ -54,6 +55,7 @@ namespace mcp {
         last_error_.clear();
 
         try {
+            //包装请求体
             json request = {
                 {"jsonrpc", "2.0"},
                 {"method", method},
@@ -61,11 +63,12 @@ namespace mcp {
                 {"id", ++request_id_}
             };
 
+            //发送调用请求
             json response = transport_->send(request);
             if (response.contains("error")) {
                 last_error_ = response["error"]["message"].get<std::string>();
                 MCP_LOG_ERROR("Failed to send request: {}", last_error_);
-                throw std::runtime_error("MCP Error" + last_error_);
+                throw std::runtime_error("MCP Error: " + last_error_);
             }
 
             return response["result"];

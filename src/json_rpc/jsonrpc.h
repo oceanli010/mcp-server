@@ -1,3 +1,5 @@
+///消息格式定义、方法处理器定义和stdio模块定义
+
 #pragma once
 
 #include <nlohmann/json.hpp>
@@ -77,10 +79,13 @@ namespace mcp {
         std::istream& in_ = std::cin;
         std::ostream& out_ = std::cout;
 
+        //读取json-rpc消息
         bool readMessage(std::string& out_body);
 
+        //写入消息
         void writeMessage(const json& msg);
 
+        //处理单个请求
         JsonRpcResponse handleRequest(const JsonRpcRequest& req);
     };
 

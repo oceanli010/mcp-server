@@ -4,6 +4,7 @@
 #include <algorithm>
 
 namespace mcp {
+    //单例模式，创建全局唯一实例
     AuthManager& AuthManager::getInstance() {
         static AuthManager instance;
         return instance;

@@ -8,6 +8,7 @@
 
 namespace mcp {
     namespace logger {
+        //单例模式，创建全局唯一实例
         Logger& Logger::getInstance() {
             static Logger instance;
             return instance;
@@ -41,7 +42,7 @@ namespace mcp {
                         std::filesystem::create_directories(log_dir);
                     }
                     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, max_file_size, max_file_count);
-                    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v]");
+                    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] [%t] %v");
                     sinks.push_back(file_sink);
                 }
 

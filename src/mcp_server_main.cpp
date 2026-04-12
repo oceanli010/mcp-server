@@ -1,3 +1,5 @@
+///MCP Server主程序
+
 #include "config/config.h"
 #include "logger/logger.h"
 #include "auth/auth.h"
@@ -6,7 +8,6 @@
 #include "mcp_server.h"
 
 #include <curl/curl.h>
-#include <mysql/mysql.h>
 
 #include <iostream>
 #include <csignal>
@@ -23,9 +24,11 @@
 
 using namespace mcp;
 
+//全局服务器实例指针
 static std::atomic<bool> g_running(false);
 static std::unique_ptr<HttpJsonRpcServer> g_http_server{nullptr};
 
+//信号处理，用于接收关闭信号
 void signal_handler(const int signum) {
     std::cerr << "\nReceived signal: " << signum << std::endl;
     g_running = false;
@@ -34,6 +37,7 @@ void signal_handler(const int signum) {
     }
 }
 
+//字符串转换日志级别
 spdlog::level::level_enum stringToLogLevel(const std::string& level_str) {
     static const std::unordered_map<std::string, spdlog::level::level_enum> level_map = {
         {"debug", spdlog::level::debug},
@@ -47,7 +51,9 @@ spdlog::level::level_enum stringToLogLevel(const std::string& level_str) {
     return it != level_map.end() ? it->second : spdlog::level::info;
 }
 
+//注册MCP Server工具、资源、提示词
 void setup_mcp_server(McpServer& mcp) {
+    //Echo工具
     {
         Tool tool;
         tool.name = "echo";
@@ -77,6 +83,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //计算器
     {
         Tool tool;
         tool.name ="calculate";
@@ -143,6 +150,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //时钟
     {
         Tool tool;
         tool.name = "get_time";
@@ -173,6 +181,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //天气获取
     {
         Tool tool;
         tool.name ="get_weather";
@@ -320,6 +329,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //文件写入
     {
         Tool tool;
         tool.name = "write_file";
@@ -382,6 +392,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //获取cpu信息
     {
         Tool tool;
         tool.name = "get_cpu_info";
@@ -468,406 +479,9 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
-    {
-        Tool tool;
-        tool.name = "mysql_connect";
-        tool.description = "Connect to MySQL database";
-        tool.input_schema.properties = {
-            {"host", {{"type", "string"}, {"description", "Database host address"}}},
-            {"port", {{"type", "integer"}, {"description", "Database port"}}},
-            {"user", {{"type", "string"}, {"description", "Database username"}}},
-            {"password", {{"type", "string"}, {"description", "Database password"}}},
-            {"database", {{"type", "string"}, {"description", "Database name"}}}
-        };
-        tool.input_schema.requirements = {"host", "port", "user", "password", "database"};
+    //可以在这里添加更多工具
 
-        mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            try {
-                std::string host = args.at("host").get<std::string>();
-                int port = args.at("port").get<int>();
-                std::string user = args.at("user").get<std::string>();
-                std::string password = args.at("password").get<std::string>();
-                std::string database = args.at("database").get<std::string>();
-
-                MYSQL* conn = mysql_init(nullptr);
-                if (!conn) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Failed to initialize MySQL connection"
-                    });
-                    return error;
-                }
-
-                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
-                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                mysql_close(conn);
-
-                ToolResult result;
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Successfully connected to MySQL database: " + database
-                });
-                return result;
-            } catch (const std::exception& e) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: ") + e.what()
-                });
-                return error;
-            }
-        });
-    }
-
-    {
-        Tool tool;
-        tool.name = "mysql_query";
-        tool.description = "Execute MySQL query";
-        tool.input_schema.properties = {
-            {"host", {{"type", "string"}, {"description", "Database host address"}}},
-            {"port", {{"type", "integer"}, {"description", "Database port"}}},
-            {"user", {{"type", "string"}, {"description", "Database username"}}},
-            {"password", {{"type", "string"}, {"description", "Database password"}}},
-            {"database", {{"type", "string"}, {"description", "Database name"}}},
-            {"query", {{"type", "string"}, {"description", "SQL query to execute"}}}
-        };
-        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "query"};
-
-        mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            try {
-                std::string host = args.at("host").get<std::string>();
-                int port = args.at("port").get<int>();
-                std::string user = args.at("user").get<std::string>();
-                std::string password = args.at("password").get<std::string>();
-                std::string database = args.at("database").get<std::string>();
-                std::string query = args.at("query").get<std::string>();
-
-                MYSQL* conn = mysql_init(nullptr);
-                if (!conn) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Failed to initialize MySQL connection"
-                    });
-                    return error;
-                }
-
-                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
-                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                if (mysql_query(conn, query.c_str())) {
-                    std::string error_msg = "Error: Failed to execute query: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                MYSQL_RES* result_set = mysql_store_result(conn);
-                std::string result_text;
-
-                if (result_set) {
-                    int num_fields = mysql_num_fields(result_set);
-                    MYSQL_ROW row;
-
-                    while ((row = mysql_fetch_row(result_set))) {
-                        for (int i = 0; i < num_fields; i++) {
-                            if (i > 0) result_text += ", ";
-                            result_text += row[i] ? row[i] : "NULL";
-                        }
-                        result_text += "\n";
-                    }
-
-                    mysql_free_result(result_set);
-                } else {
-                    if (mysql_field_count(conn) == 0) {
-                        result_text = "Query executed successfully. Affected rows: " + std::to_string(mysql_affected_rows(conn));
-                    } else {
-                        std::string error_msg = "Error: Failed to get result set: " + std::string(mysql_error(conn));
-                        mysql_close(conn);
-                        ToolResult error;
-                        error.is_error = true;
-                        error.content_items.push_back(ContentItem{
-                            .type = "text",
-                            .text = error_msg
-                        });
-                        return error;
-                    }
-                }
-
-                mysql_close(conn);
-
-                ToolResult result;
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = result_text
-                });
-                return result;
-            } catch (const std::exception& e) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: ") + e.what()
-                });
-                return error;
-            }
-        });
-    }
-
-    {
-        Tool tool;
-        tool.name = "mysql_insert";
-        tool.description = "Insert data into MySQL table";
-        tool.input_schema.properties = {
-            {"host", {{"type", "string"}, {"description", "Database host address"}}},
-            {"port", {{"type", "integer"}, {"description", "Database port"}}},
-            {"user", {{"type", "string"}, {"description", "Database username"}}},
-            {"password", {{"type", "string"}, {"description", "Database password"}}},
-            {"database", {{"type", "string"}, {"description", "Database name"}}},
-            {"table", {{"type", "string"}, {"description", "Table name"}}},
-            {"columns", {{"type", "array"}, {"description", "Column names"}}},
-            {"values", {{"type", "array"}, {"description", "Values to insert"}}}
-        };
-        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "table", "columns", "values"};
-
-        mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            try {
-                std::string host = args.at("host").get<std::string>();
-                int port = args.at("port").get<int>();
-                std::string user = args.at("user").get<std::string>();
-                std::string password = args.at("password").get<std::string>();
-                std::string database = args.at("database").get<std::string>();
-                std::string table = args.at("table").get<std::string>();
-                json columns = args.at("columns");
-                json values = args.at("values");
-
-                if (!columns.is_array() || !values.is_array()) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Columns and values must be arrays"
-                    });
-                    return error;
-                }
-
-                if (columns.size() != values.size()) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Number of columns must match number of values"
-                    });
-                    return error;
-                }
-
-                std::string query = "INSERT INTO " + table + " (";
-                for (size_t i = 0; i < columns.size(); i++) {
-                    if (i > 0) query += ", ";
-                    query += columns[i].get<std::string>();
-                }
-                query += ") VALUES (";
-                for (size_t i = 0; i < values.size(); i++) {
-                    if (i > 0) query += ", ";
-                    if (values[i].is_string()) {
-                        query += "'" + values[i].get<std::string>() + "'";
-                    } else {
-                        query += values[i].dump();
-                    }
-                }
-                query += ")";
-
-                MYSQL* conn = mysql_init(nullptr);
-                if (!conn) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Failed to initialize MySQL connection"
-                    });
-                    return error;
-                }
-
-                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
-                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                if (mysql_query(conn, query.c_str())) {
-                    std::string error_msg = "Error: Failed to execute insert: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                long long inserted_id = mysql_insert_id(conn);
-                mysql_close(conn);
-
-                ToolResult result;
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Insert successful. Inserted ID: " + std::to_string(inserted_id)
-                });
-                return result;
-            } catch (const std::exception& e) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: ") + e.what()
-                });
-                return error;
-            }
-        });
-    }
-
-    {
-        Tool tool;
-        tool.name = "mysql_update";
-        tool.description = "Update data in MySQL table";
-        tool.input_schema.properties = {
-            {"host", {{"type", "string"}, {"description", "Database host address"}}},
-            {"port", {{"type", "integer"}, {"description", "Database port"}}},
-            {"user", {{"type", "string"}, {"description", "Database username"}}},
-            {"password", {{"type", "string"}, {"description", "Database password"}}},
-            {"database", {{"type", "string"}, {"description", "Database name"}}},
-            {"table", {{"type", "string"}, {"description", "Table name"}}},
-            {"set", {{"type", "object"}, {"description", "Column-value pairs to update"}}},
-            {"where", {{"type", "string"}, {"description", "WHERE clause"}}}
-        };
-        tool.input_schema.requirements = {"host", "port", "user", "password", "database", "table", "set", "where"};
-
-        mcp.register_tool(tool, [](const json& args) -> ToolResult {
-            try {
-                std::string host = args.at("host").get<std::string>();
-                int port = args.at("port").get<int>();
-                std::string user = args.at("user").get<std::string>();
-                std::string password = args.at("password").get<std::string>();
-                std::string database = args.at("database").get<std::string>();
-                std::string table = args.at("table").get<std::string>();
-                json set_data = args.at("set");
-                std::string where_clause = args.at("where").get<std::string>();
-
-                if (!set_data.is_object()) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: SET data must be an object"
-                    });
-                    return error;
-                }
-
-                std::string query = "UPDATE " + table + " SET ";
-                bool first = true;
-                for (auto& [key, value] : set_data.items()) {
-                    if (!first) query += ", ";
-                    query += key + " = ";
-                    if (value.is_string()) {
-                        query += "'" + value.get<std::string>() + "'";
-                    } else {
-                        query += value.dump();
-                    }
-                    first = false;
-                }
-                query += " WHERE " + where_clause;
-
-                MYSQL* conn = mysql_init(nullptr);
-                if (!conn) {
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = "Error: Failed to initialize MySQL connection"
-                    });
-                    return error;
-                }
-
-                if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, nullptr, 0)) {
-                    std::string error_msg = "Error: Failed to connect to database: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                if (mysql_query(conn, query.c_str())) {
-                    std::string error_msg = "Error: Failed to execute update: " + std::string(mysql_error(conn));
-                    mysql_close(conn);
-                    ToolResult error;
-                    error.is_error = true;
-                    error.content_items.push_back(ContentItem{
-                        .type = "text",
-                        .text = error_msg
-                    });
-                    return error;
-                }
-
-                long long affected_rows = mysql_affected_rows(conn);
-                mysql_close(conn);
-
-                ToolResult result;
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = "Update successful. Affected rows: " + std::to_string(affected_rows)
-                });
-                return result;
-            } catch (const std::exception& e) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: ") + e.what()
-                });
-                return error;
-            }
-        });
-    }
-
+    //系统信息
     {
         Resources resources;
         resources.uri = "system://info";
@@ -901,6 +515,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //配置信息
     {
         Resources resources;
         resources.uri = "config://server";
@@ -927,6 +542,7 @@ void setup_mcp_server(McpServer& mcp) {
         });
     }
 
+    //代码审查
     {
         Prompt prompt;
         prompt.name = "code_review";
@@ -962,6 +578,7 @@ void setup_mcp_server(McpServer& mcp) {
     MCP_LOG_INFO("MCP setup complete: {} tools, {} resources, {} prompts", mcp.list_tools().size(), mcp.list_resources().size(), mcp.list_prompts().size());
 }
 
+// 创建 JSON-RPC 调度器（绑定到 MCP 服务器）
 JsonRpcDispatcher create_dispatcher(McpServer& mcp_server) {
     JsonRpcDispatcher dispatcher;
 
@@ -1026,6 +643,7 @@ JsonRpcDispatcher create_dispatcher(McpServer& mcp_server) {
     return dispatcher;
 }
 
+//HTTP模式
 void run_http_mode(McpServer& mcp_server, const std::string& host, int port) {
     MCP_LOG_INFO("Running http server: {}:{}", host, port);
     auto dispatcher = create_dispatcher(mcp_server);
@@ -1086,6 +704,7 @@ void run_http_mode(McpServer& mcp_server, const std::string& host, int port) {
     MCP_LOG_INFO("HTTP server stopped");
 }
 
+//stdio模式
 void run_stdio_mode(McpServer& mcp_server) {
     MCP_LOG_INFO("Starting stdio server");
 
@@ -1096,6 +715,7 @@ void run_stdio_mode(McpServer& mcp_server) {
     MCP_LOG_INFO("stdio server stopped");
 }
 
+//同时运行
 void run_both_mode(McpServer& mcp_server, const std::string& host, int port) {
     MCP_LOG_INFO("Starting both HTTP and stdio servers");
     std::thread http_thread;
@@ -1118,11 +738,12 @@ void run_both_mode(McpServer& mcp_server, const std::string& host, int port) {
 }
 
 int main(int argc, char* argv[]) {
-    std::string config_file = "../../config/server.json";
-    std::string mode = "http";
+    std::string config_file = "../../config/server.json"; //配置文件
+    std::string mode = "http";  //默认http模式
     std::string host;
     int port = 0;
 
+    //命令行参数解析
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--mode" && i + 1 < argc) {
@@ -1136,11 +757,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    //模式读取
     if (mode != "http" && mode != "stdio" && mode != "both") {
         std::cerr << "Invalid mode: " << mode << " (must be http, stdio, or both)" << std::endl;
         return 1;
     }
 
+    //加载配置文件
     if (!MCP_CONFIG.loadConfigFile(config_file)) {
         std::cerr << "Failed to load config file: " << config_file << std::endl;
         return 1;
@@ -1154,6 +777,7 @@ int main(int argc, char* argv[]) {
         port = MCP_CONFIG.getServerPort();
     }
 
+    //日志初始化
     MCP_LOG_INIT(
         "mcp_server",
         MCP_CONFIG.getLogPath(),
@@ -1163,6 +787,7 @@ int main(int argc, char* argv[]) {
     );
     MCP_LOG_SET_LEVEL(stringToLogLevel(MCP_CONFIG.getLogLevel()));
 
+    //获取认证API_KEY
     auto api_keys = MCP_CONFIG.getApiKeys();
     MCP_AUTH.init(api_keys);
 
@@ -1175,8 +800,10 @@ int main(int argc, char* argv[]) {
     MCP_LOG_INFO("Authentication: {}", MCP_AUTH.isEnabled() ? "Enabled" : "Disabled");
 
     try {
+        //创建MCP实例
         McpServer mcp_server("mcp-server", "1.0.0");
 
+        //设置服务器能力
         ServerCapabilities server_capabilities;
         server_capabilities.tool_capabilities = ServerCapabilities::ToolCapabilities{false};
         server_capabilities.resources_capabilities = ServerCapabilities::ResourcesCapabilities{false, false};
@@ -1185,9 +812,11 @@ int main(int argc, char* argv[]) {
 
         setup_mcp_server(mcp_server);
 
+        //信号处理
         std::signal(SIGINT, signal_handler);
         std::signal(SIGTERM, signal_handler);
 
+        //按模式启动服务器
         if (mode == "http") {
             run_http_mode(mcp_server, host, port);
         } else if (mode == "stdio") {
@@ -1196,6 +825,7 @@ int main(int argc, char* argv[]) {
             run_both_mode(mcp_server, host, port);
         }
 
+        //等待中止信号
         while (g_running.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

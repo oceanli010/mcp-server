@@ -60,31 +60,36 @@ namespace mcp {
         size_t content_length = 0;
         bool found_content_length = false;
 
+        //读取消息头部
         while (std::getline(in_, line)) {
+            //自动忽略回车
             if (!line.empty() && line.back() == '\r') {
                 line.pop_back();
             }
 
+            //空行，头部结束
             if (line.empty()) {
                 break;
             }
 
+            //没有冒号，视为非法头部
             auto colon = line.find(':');
             if (colon == std::string::npos) {
                 continue;
             }
 
-            std::string key = line.substr(0, colon);
-            std::string value = line.substr(colon + 1);
-            size_t pos = value.find_first_not_of(' ');
+            std::string key = line.substr(0, colon);      //头部
+            std::string value = line.substr(colon + 1);     //消息体
+            size_t pos = value.find_first_not_of(' ');          //去掉消息体的前导空格
             if (pos != std::string::npos) {
                 MCP_LOG_DEBUG("Header: {}:{}", key, value.substr(pos));
                 value = value.substr(pos);
             }
 
+            //转小写，实现大小写不敏感
             std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
             std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
-            HeaderType headerType = getHeaderType(key);
+            HeaderType headerType = getHeaderType(key);     //读取头部类型
             if (headerType == HeaderType::CONTENT_LENGTH) {
                 try {
                     content_length = static_cast<size_t>(std::stoul(value));
@@ -105,10 +110,12 @@ namespace mcp {
         }
 
         if (content_length == 0) {
+            //允许空消息
             MCP_LOG_DEBUG("Empty content");
             return true;
         }
 
+        //按长度读取消息体
         out_body.resize(content_length);
         size_t total_read = 0;
         while (total_read < content_length) {
@@ -141,6 +148,7 @@ namespace mcp {
         MCP_LOG_DEBUG("Send response: {} byte(s)", content_length);
     }
 
+    //运行服务器主循环（阻塞模式）
     void StdioJsonRpcServer::run() {
         MCP_LOG_INFO("Stdio Json Rpc Server start");
 
@@ -158,6 +166,7 @@ namespace mcp {
                 continue;
             }
 
+            //解析请求对象
             try {
                 json request_json = json::parse(msg_body);
                 JsonRpcRequest request = request_json;
@@ -188,6 +197,7 @@ namespace mcp {
         resp.id = req.id.has_value() ? req.id.value() : json(nullptr);
 
         try {
+            //请求的方法不存在
             if (req.method.empty()) {
                 resp.error = JsonRpcError{
                     .code = jsonrpc_errc::InvalidRequest,
@@ -196,6 +206,7 @@ namespace mcp {
                 return resp;
             }
 
+            //请求的方法未实现
             if (!dispatcher_.hasHandler(req.method)) {
                 resp.error = JsonRpcError{
                     .code = jsonrpc_errc::MethodNotFound,
@@ -204,8 +215,8 @@ namespace mcp {
                 return resp;
             }
 
-            json params = req.params.has_value() ? req.params.value() : json::object();
-            json result = dispatcher_.call(req.method, params);
+            json params = req.params.has_value() ? req.params.value() : json::object(); //提取请求参数
+            json result = dispatcher_.call(req.method, params);     //获取请求结果
 
             resp.result = result;
         } catch (const std::exception& e) {

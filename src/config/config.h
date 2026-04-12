@@ -1,3 +1,6 @@
+///配置模块
+///在../config/server.json中读取配置
+
 #pragma once
 
 #include <nlohmann/json.hpp>
@@ -23,6 +26,7 @@ namespace mcp {
         Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;
 
+        //get方法，用于获取配置信息
         int getServerPort() const;
 
         std::string getLogPath() const;

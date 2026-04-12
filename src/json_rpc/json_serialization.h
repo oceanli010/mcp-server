@@ -1,3 +1,5 @@
+///json消息序列化
+
 #pragma once
 
 #include "jsonrpc.h"

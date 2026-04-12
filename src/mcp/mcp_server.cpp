@@ -17,7 +17,7 @@ namespace mcp {
 
     InitializeResult McpServer::get_initialize_result() const {
         InitializeResult result;
-        result.version = "2024-11-05";
+        result.version = "2026-04-12";
         result.capabilities = server_capabilities_;
         result.info = server_info_;
         return result;

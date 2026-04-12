@@ -28,22 +28,27 @@ namespace mcp {
         }
     };
 
+    //使用配置文件构造
     HttpJsonRpcServer::HttpJsonRpcServer(JsonRpcDispatcher&& dispatcher)
         : HttpJsonRpcServer(std::move(dispatcher), "0.0.0.0", MCP_CONFIG.getServerPort()) {
         MCP_LOG_INFO("HTTP JSON-RPC server initialized from config");
     }
 
+    //手动参数构造
     HttpJsonRpcServer::HttpJsonRpcServer(JsonRpcDispatcher&& dispatcher, const std::string& host, int port):
         dispatcher_(std::move(dispatcher)), host_(host), port_(port), impl_(std::make_unique<Impl>()){
         MCP_LOG_INFO("HTTP JSON-RPC server created on {}:{}", host_, port_);
 
+        //注册post端点
         impl_->server.Post("/jsonrpc", [this](const httplib::Request& req, httplib::Response& resp) {
+            //设置CROS头部
             resp.set_header("Access-Control-Allow-Origin", "*");
             resp.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
             resp.set_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
 
             // 认证检查
             if (MCP_AUTH.isEnabled()) {
+                //查找api key是否存在
                 auto api_key_it = req.headers.find("X-API-Key");
                 if (api_key_it == req.headers.end()) {
                     MCP_LOG_WARN("Missing API key in request");
@@ -59,7 +64,8 @@ namespace mcp {
                     resp.status = 401;
                     return;
                 }
-                
+
+                //验证api key是否有效
                 if (!MCP_AUTH.validateApiKey(api_key_it->second)) {
                     MCP_LOG_WARN("Invalid API key: {}", api_key_it->second);
                     json error_response = {
@@ -76,6 +82,7 @@ namespace mcp {
                 }
             }
 
+            //处理请求并设置响应码
             try {
                 std::string response = handleRequest(req.body);
                 resp.set_content(response, "application/json");
@@ -95,6 +102,7 @@ namespace mcp {
             }
         });
 
+        //注册options端点（cors预检）
         impl_->server.Options("/jsonrpc", [](const httplib::Request& req, httplib::Response& resp) {
             resp.set_header("Access-Control-Allow-Origin", "*");
             resp.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -102,6 +110,7 @@ namespace mcp {
             resp.status = 204;
         });
 
+        //注册get端点（健康检查）
         impl_->server.Get("/jsonrpc", [](const httplib::Request& req, httplib::Response& resp) {
             json health = {
                 {"status", "OK"},
@@ -111,6 +120,7 @@ namespace mcp {
             resp.set_content(health.dump(), "application/json");
         });
 
+        //注册get端点（提供服务信息）
         impl_->server.Get("/", [this](const httplib::Request& req, httplib::Response& resp) {
             json info = {
                 {"service", "MCP HTTP JSON-RPC Server"},
@@ -169,8 +179,11 @@ namespace mcp {
         MCP_LOG_DEBUG("Handle Request: {}", request);
 
         try {
+            //解析json请求
             json req_json = json::parse(request);
+            //如果是批量请求，则逐个进行处理
             if (req_json.is_array()) {
+                //请求的处理结果存于此处
                 json batch_resp = json::array();
                 for (const auto& item : req_json) {
                     try {
@@ -184,7 +197,7 @@ namespace mcp {
                             req.params = item["params"];
                         }
 
-                        JsonRpcResponse resp = processSingleRequest(req);
+                        JsonRpcResponse resp = processSingleRequest(req);   //具体的请求处理
                         if (req.id.has_value()) {
                             json resp_json;
                             to_json(resp_json, resp);
@@ -201,6 +214,7 @@ namespace mcp {
                 return response;
             }
 
+            //单个请求处理
             JsonRpcRequest req = req_json;
             if (!req.id.has_value()) {
                 if (dispatcher_.hasHandler(req.method)) {
@@ -217,9 +231,11 @@ namespace mcp {
             MCP_LOG_DEBUG("Response: {}", resp_str);
             return resp_str;
         } catch (const json::parse_error& e) {
+            //处理json解析错误
             MCP_LOG_ERROR("Error in JSON parse: {}", e.what());
             return createErrorResponse(jsonrpc_errc::ParseError, e.what());
         } catch (const std::exception& e) {
+            //其他错误
             MCP_LOG_ERROR("Error when processing request: {}", e.what());
             return createErrorResponse(jsonrpc_errc::InternalError, e.what());
         }
@@ -252,7 +268,9 @@ namespace mcp {
                 }
             }
 
+            //设置分块内容提供者，允许服务器持续发送数据
             resp.set_chunked_content_provider("text/event_stream", [callback](size_t, httplib::DataSink& sink) {
+                //按照SSE格式构建事件并写入响应流
                 auto send_event = [&sink](const std::string& data) {
                     std::string event = "data: " + data + "\n\n";
                     sink.write(event.c_str(), event.size());
@@ -274,6 +292,7 @@ namespace mcp {
         }
 
         MCP_LOG_INFO("Server is running on {}:{}", host_, port_);
+        //阻塞模式启动
         if (!impl_->server.listen(host_, port_)) {
             running_ = false;
             MCP_LOG_ERROR("Failed to listen to port on {}:{}", host_, port_);
