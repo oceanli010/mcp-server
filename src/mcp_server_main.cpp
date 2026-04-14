@@ -194,9 +194,11 @@ void setup_mcp_server(McpServer& mcp) {
 
         mcp.register_tool(tool, [](const json& args) -> ToolResult {
             try {
+                //提取参数信息
                 std::string city = args.at("city").get<std::string>();
                 std::string api_key = args.value("api_key", "853851dfd755466fbf743931260404");
 
+                //城市名编码
                 std::string encoded_city;
                 for (char c : city) {
                     if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
@@ -208,6 +210,7 @@ void setup_mcp_server(McpServer& mcp) {
                     }
                 }
 
+                //CURL初始化
                 struct CurlGuard {
                     CURL* curl;
                     CurlGuard(CURL* c) : curl(c) {}
@@ -226,23 +229,28 @@ void setup_mcp_server(McpServer& mcp) {
                 }
                 CurlGuard guard(curl);
 
+                //构建请求URL
                 std::string weather_url = "https://api.weatherapi.com/v1/current.json?key=" + api_key +
                                         "&q=" + encoded_city + "&aqi=no&lang=zh";
-            
+
+                //配置CURL请求
                 std::string weather_response;
-                curl_easy_setopt(curl, CURLOPT_URL, weather_url.c_str());
+                curl_easy_setopt(curl, CURLOPT_URL, weather_url.c_str());   //设置请求URL
+                //设置写入函数
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, size_t size, size_t nmemb, std::string* data) {
                     data->append(ptr, size * nmemb);
                     return size * nmemb;
                 });
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &weather_response);
-                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &weather_response);   //响应信息保存到 weather_response
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);       //10s超时时间
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L); //SSL验证启用
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L); //验证主机名
+                //使用User-Agent头模拟浏览器请求
                 curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
 
-                CURLcode res = curl_easy_perform(curl);
-            
+                CURLcode res = curl_easy_perform(curl);         //执行请求
+
+                //检查错误状态
                 if (res != CURLE_OK) {
                     ToolResult error;
                     error.is_error = true;
@@ -253,6 +261,7 @@ void setup_mcp_server(McpServer& mcp) {
                     return error;
                 }
 
+                //解析json响应
                 json weather_data;
                 try {
                     weather_data = json::parse(weather_response);
@@ -266,6 +275,7 @@ void setup_mcp_server(McpServer& mcp) {
                     return error;
                 }
 
+                //错误检查
                 if (weather_data.contains("error")) {
                     ToolResult error;
                     error.is_error = true;
@@ -276,6 +286,7 @@ void setup_mcp_server(McpServer& mcp) {
                     return error;
                 }
 
+                //验证数据结构
                 if (!weather_data.contains("location") || !weather_data.contains("current")) {
                     ToolResult error;
                     error.is_error = true;
@@ -286,6 +297,7 @@ void setup_mcp_server(McpServer& mcp) {
                     return error;
                 }
 
+                //提取天气信息
                 auto& location = weather_data["location"];
                 auto& current = weather_data["current"];
             
@@ -298,6 +310,7 @@ void setup_mcp_server(McpServer& mcp) {
                 std::string wind_dir_str = current["wind_dir"];
                 std::string weather_desc = current["condition"]["text"];
 
+                //构建输出字符串
                 std::ostringstream oss;
                 oss << "【" << location_name;
                 if (!country.empty()) {
@@ -404,6 +417,7 @@ void setup_mcp_server(McpServer& mcp) {
                 ToolResult result;
                 std::ostringstream oss;
 
+                //通过 /proc 目录获取cpu信息
                 std::ifstream cpuinfo("/proc/cpuinfo");
                 if (cpuinfo.is_open()) {
                     std::string line;
@@ -416,6 +430,7 @@ void setup_mcp_server(McpServer& mcp) {
                     cpuinfo.close();
                 }
 
+                //计算核心数
                 std::ifstream stat("/proc/stat");
                 if (stat.is_open()) {
                     int core_count = 0;
@@ -425,15 +440,16 @@ void setup_mcp_server(McpServer& mcp) {
                             core_count++;
                         }
                     }
-                    stat.close();
+                    //stat.close();
                     oss << "CPU Cores: " << core_count << "\n";
                 }
 
-                std::ifstream stat_file("/proc/stat");
-                if (stat_file.is_open()) {
+                //计算cpu使用率
+                //std::ifstream stat_file("/proc/stat");
+                if (stat.is_open()) {
                     std::string line;
-                    std::getline(stat_file, line);
-                    stat_file.close();
+                    std::getline(stat, line);
+                    stat.close();
 
                     std::istringstream iss(line);
                     std::string cpu; 
@@ -445,6 +461,7 @@ void setup_mcp_server(McpServer& mcp) {
                     oss << "CPU Usage: " << std::fixed << std::setprecision(2) << usage << "%\n";
                 }
 
+                //计算cpu温度
                 std::ifstream temp_file("/sys/class/thermal/thermal_zone0/temp");
                 if (temp_file.is_open()) {
                     int temp;
@@ -454,6 +471,7 @@ void setup_mcp_server(McpServer& mcp) {
                     oss << "CPU Temperature: " << std::fixed << std::setprecision(1) << temp_c << "°C\n";
                 }
 
+                //获取平均负载
                 std::ifstream loadavg("/proc/loadavg");
                 if (loadavg.is_open()) {
                     double load1, load5, load15;
