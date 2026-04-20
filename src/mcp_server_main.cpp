@@ -412,9 +412,45 @@ void setup_mcp_server(McpServer& mcp) {
         tool.description = "Get CPU resource information";
         tool.input_schema.properties = json::object();
 
-        mcp.register_tool(tool, [](const json& args) -> ToolResult {
+        mcp.register_tool(tool, [&mcp](const json& args) -> ToolResult {
             try {
-                ToolResult result;
+                //调用 CPU 信息资源
+                 ResourcesContent content = mcp.read_resources("system://cpu_info");
+
+                 ToolResult result;
+
+                result.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = content.text
+                });
+                return result;
+            } catch (const std::exception& e) {
+                ToolResult error;
+                error.is_error = true;
+                error.content_items.push_back(ContentItem{
+                    .type = "text",
+                    .text = std::string("Error: ") + e.what()
+                });
+                return error;
+            }
+        });
+    }
+
+    //可以在这里添加更多工具
+
+    {
+        Resources resources;
+        resources.uri = "system://cpu_info";
+        resources.name = "CPU Information";
+        resources.description = "CPU resource information";
+        resources.mime_type = "text/plain";
+
+        mcp.register_resource(resources, [](const std::string& uri) -> ResourcesContent {
+            try {
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "text/plain";
+
                 std::ostringstream oss;
 
                 //通过 /proc 目录获取cpu信息
@@ -440,19 +476,18 @@ void setup_mcp_server(McpServer& mcp) {
                             core_count++;
                         }
                     }
-                    //stat.close();
                     oss << "CPU Cores: " << core_count << "\n";
                 }
 
                 //计算cpu使用率
-                //std::ifstream stat_file("/proc/stat");
-                if (stat.is_open()) {
+                std::ifstream stat_file("/proc/stat");
+                if (stat_file.is_open()) {
                     std::string line;
-                    std::getline(stat, line);
-                    stat.close();
+                    std::getline(stat_file, line);
+                    stat_file.close();
 
                     std::istringstream iss(line);
-                    std::string cpu; 
+                    std::string cpu;
                     long user, nice, system, idle, iowait, irq, softirq;
                     iss >> cpu >> user >> nice >> system >> idle >> iowait >> irq >> softirq;
 
@@ -480,24 +515,17 @@ void setup_mcp_server(McpServer& mcp) {
                     oss << "Load Average (1/5/15 min): " << load1 << "/" << load5 << "/" << load15 << "\n";
                 }
 
-                result.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = oss.str()
-                });
-                return result;
+                content.text = oss.str();
+                return content;
             } catch (const std::exception& e) {
-                ToolResult error;
-                error.is_error = true;
-                error.content_items.push_back(ContentItem{
-                    .type = "text",
-                    .text = std::string("Error: ") + e.what()
-                });
-                return error;
+                ResourcesContent content;
+                content.uri = uri;
+                content.mime_type = "text/plain";
+                content.text = std::string("Error: ") + e.what();
+                return content;
             }
         });
     }
-
-    //可以在这里添加更多工具
 
     //系统信息
     {
