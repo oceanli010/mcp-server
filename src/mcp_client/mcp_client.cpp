@@ -9,6 +9,7 @@ namespace mcp {
     class HttpTransPort::Impl_ {
     public:
         Impl_(const std::string& host, int port) : host_(host), port_(port), client_(host, port) {
+            //客户端超时设置
             client_.set_connection_timeout(5, 0);
             client_.set_read_timeout(30, 0);
         };

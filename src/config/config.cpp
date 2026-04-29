@@ -118,6 +118,23 @@ namespace mcp {
         if (!auth.contains("api_keys")) {
             auth["api_keys"] = json::array();
         }
+
+        if (!config_data_.contains("database")) {
+            config_data_["database"] = json::object();
+        }
+        auto& database = config_data_["database"];
+        if (!database.contains("type")) {
+            database["type"] = "sqlite";
+        }
+        if (!database.contains("file_path")) {
+            database["file_path"] = "data/mcp_server.db";
+        }
+        if (!database.contains("use_wal")) {
+            database["use_wal"] = true;
+        }
+        if (!database.contains("busy_timeout")) {
+            database["busy_timeout"] = 5000;
+        }
     }
 
     int Config::getServerPort() const {
@@ -159,5 +176,37 @@ namespace mcp {
             }
         }
         return api_keys;
+    }
+
+    std::string Config::getDbType() const {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        if (config_data_.contains("database") && config_data_["database"].contains("type")) {
+            return config_data_["database"]["type"].get<std::string>();
+        }
+        return "sqlite";
+    }
+
+    std::string Config::getDbFilePath() const {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        if (config_data_.contains("database") && config_data_["database"].contains("file_path")) {
+            return config_data_["database"]["file_path"].get<std::string>();
+        }
+        return "data/mcp_server.db";
+    }
+
+    bool Config::getDbUseWAL() const {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        if (config_data_.contains("database") && config_data_["database"].contains("use_wal")) {
+            return config_data_["database"]["use_wal"].get<bool>();
+        }
+        return true;
+    }
+
+    int Config::getDbBusyTimeout() const {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        if (config_data_.contains("database") && config_data_["database"].contains("busy_timeout")) {
+            return config_data_["database"]["busy_timeout"].get<int>();
+        }
+        return 5000;
     }
 }

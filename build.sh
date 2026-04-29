@@ -12,6 +12,9 @@ else
     echo "正在构建 MCP 项目..."
 fi
 
+PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+VCPKG_INSTALLED="$PROJECT_ROOT/cmake-build-debug/vcpkg_installed/x64-linux"
+
 if [ ! -d "build" ]; then
     mkdir build
     echo "已创建构建目录"
@@ -24,9 +27,9 @@ echo "正在使用 CMake 配置项目..."
 
 if [ "$BUILD_MODE" = "asan" ]; then
 
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/make -DCMAKE_CXX_COMPILER=/usr/bin/g++
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/make -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DVCPKG_MANIFEST_MODE=OFF -DCMAKE_PREFIX_PATH="$VCPKG_INSTALLED/share" -DSQLiteCpp_DIR="$VCPKG_INSTALLED/share/sqlitecpp"
 else
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=/usr/bin/make -DCMAKE_CXX_COMPILER=/usr/bin/g++
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=/usr/bin/make -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DVCPKG_MANIFEST_MODE=OFF -DCMAKE_PREFIX_PATH="$VCPKG_INSTALLED/share" -DSQLiteCpp_DIR="$VCPKG_INSTALLED/share/sqlitecpp"
 fi
 
 
