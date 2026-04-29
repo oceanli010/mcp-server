@@ -20,6 +20,7 @@ set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_i
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(httplib REQUIRED)
+find_package(SQLiteCpp REQUIRED)
 
 add_subdirectory(src)
 

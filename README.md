@@ -17,6 +17,14 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 - **Ollama 集成**：通过 Python 客户端与 Ollama 大语言模型无缝集成
 - **多工具支持**：内置多种实用工具，如时间查询、天气查询、CPU信息获取等
 - **对话管理**：支持多轮对话，保持上下文连贯性
+- **数据库管理**：基于 SQLite 的数据持久化，支持工具、资源、提示词的存储与管理
+
+### 数据库功能
+
+- **数据持久化**：工具注册信息、资源配置、提示词模板自动保存到 SQLite 数据库
+- **迁移管理**：自动执行数据库 schema 迁移，支持版本升级
+- **事务支持**：确保数据操作的原子性和一致性
+- **并发安全**：支持多线程环境下的数据库访问
 
 ### 内置工具
 
@@ -36,6 +44,7 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 - CMake 3.16 或更高版本
 - Python 3.7 或更高版本（用于客户端）
 - Ollama（用于大语言模型集成）
+- SQLite 3.x（数据库支持，通过 vcpkg 自动安装）
 
 ### 服务器安装
 
@@ -161,6 +170,10 @@ MCP (Model Context Protocol) Server 是一个轻量级的工具调用服务，�
 | `logging.log_file_size` | 单个日志文件大小限制（字节） | 52428800 |
 | `logging.log_file_count` | 日志文件保留数量 | 5 |
 | `logging.log_console_output` | 是否在控制台输出日志 | true |
+| `database.type` | 数据库类型 | sqlite |
+| `database.file_path` | SQLite 数据库文件路径 | /tmp/mcp_server.db |
+| `database.use_wal` | 是否启用 WAL 模式 | true |
+| `database.busy_timeout` | 数据库繁忙超时时间（毫秒） | 5000 |
 
 ### 客户端配置
 

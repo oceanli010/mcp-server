@@ -41,6 +41,12 @@ namespace mcp {
     
         std::vector<std::string> getApiKeys() const;
 
+        // 数据库配置
+        std::string getDbType() const;
+        std::string getDbFilePath() const;
+        bool getDbUseWAL() const;
+        int getDbBusyTimeout() const;
+
     private:
         Config() = default;
         ~Config() = default;

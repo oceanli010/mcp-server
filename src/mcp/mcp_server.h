@@ -9,6 +9,8 @@
 #include <mutex>
 
 namespace mcp {
+    class McpRepository;
+
     class McpServer {
     public:
         using ToolHandler = std::function<ToolResult(const json& arguments)>;
@@ -18,6 +20,9 @@ namespace mcp {
 
         //McpServer构造函数
         McpServer(const std::string& name, const std::string& version);
+
+        //初始化数据库支持
+        void init_database(std::unique_ptr<McpRepository> repository);
 
         //McpServer初始化
         InitializeResult get_initialize_result() const;
@@ -64,5 +69,7 @@ namespace mcp {
 
         SseEventCallback sse_event_callback_;
         mutable std::mutex sse_mutex_;
+
+        std::unique_ptr<McpRepository> repository_;
     };
 }

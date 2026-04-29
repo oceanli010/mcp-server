@@ -6,6 +6,9 @@
 #include "http_jsonrpc.h"
 #include "jsonrpc.h"
 #include "mcp_server.h"
+#include "db/database.h"
+#include "db/migration_manager.h"
+#include "db/repository.h"
 
 #include <curl/curl.h>
 
@@ -848,6 +851,15 @@ int main(int argc, char* argv[]) {
     try {
         //创建MCP实例
         McpServer mcp_server("mcp-server", "1.0.0");
+
+        //初始化数据库
+        MCP_DB.init();
+        auto db = MCP_DB.getConnection();
+        MigrationManager migrationManager(*db);
+        migrationManager.runMigrations();
+        
+        auto repository = std::make_unique<McpRepository>(*db);
+        mcp_server.init_database(std::move(repository));
 
         //设置服务器能力
         ServerCapabilities server_capabilities;
